@@ -19,7 +19,7 @@ export default function DeletePostModal({ state, result, onCancel, onConfirm, on
 
   if (state === "confirming") {
     return (
-      <AppModal title={t("preview.deleteConfirmTitle")}>
+      <AppModal title={t("preview.deleteConfirmTitle")} onClose={onCancel}>
         <p className="app-modal-text">{t("preview.deleteConfirmText")}</p>
         <div className="app-modal-buttons">
           <button type="button" className="post-dropdown-item-action-button" onClick={onCancel}>{t("preview.cancel")}</button>
@@ -38,7 +38,7 @@ export default function DeletePostModal({ state, result, onCancel, onConfirm, on
   }
 
   return (
-    <AppModal title={result?.title || t("preview.deleteErrorTitle")}>
+    <AppModal title={result?.title || t("preview.deleteErrorTitle")} onClose={onAcknowledge}>
       {result?.message ? <p className="app-modal-text">{result.message}</p> : null}
       {result?.details ? <p className="app-modal-text">{result.details}</p> : null}
       <div className="app-modal-buttons">

@@ -11,7 +11,7 @@ export default function ReplaceContentModal({ onCancel, onContinue }: ReplaceCon
   const { t } = useI18n();
 
   return (
-    <AppModal title={t("editor.replaceTitle")}>
+    <AppModal title={t("editor.replaceTitle")} onClose={onCancel}>
       <p className="app-modal-text">{t("editor.replaceText")}</p>
       <div className="app-modal-buttons">
         <button type="button" className="editor-panel-button" onClick={onCancel}>{t("editor.cancel")}</button>

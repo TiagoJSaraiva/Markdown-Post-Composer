@@ -12,7 +12,7 @@ export default function ClearingModal({ error, onDismiss }: ClearingModalProps) 
 
   if (error) {
     return (
-      <AppModal title={t("editor.clearErrorTitle")}>
+      <AppModal title={t("editor.clearErrorTitle")} onClose={onDismiss}>
         <p className="app-modal-text">{error}</p>
         <div className="app-modal-buttons">
           <button type="button" className="editor-panel-button" onClick={onDismiss}>{t("editor.ok")}</button>

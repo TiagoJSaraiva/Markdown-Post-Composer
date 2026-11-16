@@ -27,7 +27,7 @@ export default function SavePostModal({
 
   if (state === "confirming") {
     return (
-      <AppModal title={t("editor.saveConfirmTitle")}>
+      <AppModal title={t("editor.saveConfirmTitle")} onClose={onCancel}>
         <p className="app-modal-text">
           {isEditing ? t("editor.saveConfirmEdit") : t("editor.saveConfirmCreate")}
         </p>
@@ -51,7 +51,7 @@ export default function SavePostModal({
   const title = result?.title || (succeeded ? t("editor.successTitle") : t("editor.errorTitle"));
 
   return (
-    <AppModal title={title}>
+    <AppModal title={title} onClose={onAcknowledge}>
       {result?.message ? <p className="app-modal-text">{result.message}</p> : null}
       {result && result.errors.length > 0 ? (
         <ul className="app-modal-error-list">

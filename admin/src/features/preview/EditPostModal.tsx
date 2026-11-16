@@ -20,7 +20,7 @@ export default function EditPostModal({ isPreparing, errorMessage, onCancel, onC
   }
 
   return (
-    <AppModal title={t("preview.editConfirmTitle")}>
+    <AppModal title={t("preview.editConfirmTitle")} onClose={onCancel}>
       <p className="app-modal-text">{t("preview.editConfirmText")}</p>
       {errorMessage ? <p className="app-modal-text">{errorMessage}</p> : null}
       <div className="app-modal-buttons">
