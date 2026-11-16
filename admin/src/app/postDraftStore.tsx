@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { getConfig } from "../config/env";
 import {
   PostDraftContext,
   type EditSession,
@@ -9,7 +10,7 @@ import {
 
 export function PostDraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<PostDraftState>({
-    category: "BLOG",
+    category: getConfig().defaultCategory,
     title: "",
     preview: "",
     content_markdown: "",

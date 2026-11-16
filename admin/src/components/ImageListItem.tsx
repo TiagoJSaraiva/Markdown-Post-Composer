@@ -1,6 +1,7 @@
 import "../assets/css/ImageListItem.css"
 import StyledFileInput from "./StyledFileInput"
 import { Check } from "lucide-react"
+import { useI18n } from "../i18n"
 
 type ImageListItemProps = {
   id: number
@@ -29,6 +30,8 @@ export default function ImageListItem({
   onConfirmName,
   onRemove
 }: ImageListItemProps) {
+  const { t } = useI18n()
+
   function handleFileSelect(file: File | null) {
     onPickFile(id, file)
   }
@@ -45,7 +48,7 @@ export default function ImageListItem({
     <div className="image-list-item">
       <div className="image-list-item-controls">
         <StyledFileInput
-          text={hasSelectedFile ? "Trocar Imagem" : "Escolher imagem"}
+          text={hasSelectedFile ? t("image.replace") : t("image.choose")}
           accept="image/*"
           onFileSelect={handleFileSelect}
         />
@@ -55,7 +58,7 @@ export default function ImageListItem({
             <input
               type="text"
               className="image-list-item-name-input"
-              placeholder="Nome"
+              placeholder={t("image.namePlaceholder")}
               value={displayName}
               onChange={(event) => onChangeName(id, event.target.value)}
               onKeyDown={(event) => {
@@ -70,7 +73,7 @@ export default function ImageListItem({
               className="image-list-item-name-confirm"
               onClick={handleConfirmName}
               disabled={!canConfirmName || isBusy}
-              aria-label="Confirmar nome"
+              aria-label={t("image.confirmName")}
             >
               <Check size={18} />
             </button>

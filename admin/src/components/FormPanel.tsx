@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { usePostDraft } from "../app/postDraftContext";
+import { useAdminAuth, useAdminPassword } from "../auth/authContext";
+import { getConfig } from "../config/env";
+import { useI18n } from "../i18n";
+import { describeError } from "../i18n/errors";
 import InputLabel from "./InputLabel";
 import ImageListItem from "./ImageListItem";
 import {
@@ -20,21 +24,6 @@ type LocalImageItem = {
   error: string | null;
 };
 
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  if (typeof error === "object" && error !== null) {
-    const maybeMessage = (error as { message?: unknown }).message;
-    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
-      return maybeMessage;
-    }
-  }
-
-  return fallback;
-}
-
 export default function FormPanel() {
   const {
     draft,
@@ -46,6 +35,10 @@ export default function FormPanel() {
     setBanner,
     setTempImages
   } = usePostDraft();
+  const { t } = useI18n();
+  const password = useAdminPassword();
+  const { lockIfUnauthorized } = useAdminAuth();
+  const { categories } = getConfig();
   const [imageItems, setImageItems] = useState<LocalImageItem[]>([]);
   const [isLoadingTemp, setIsLoadingTemp] = useState(false);
   const [nextImageId, setNextImageId] = useState(1);
@@ -58,7 +51,7 @@ export default function FormPanel() {
     async function loadFromTemp() {
       setIsLoadingTemp(true);
       try {
-        const tempItems = await listTempImages();
+        const tempItems = await listTempImages(password);
         if (!active) return;
 
         const mapped = tempItems.map((item, index) => ({
@@ -75,8 +68,9 @@ export default function FormPanel() {
         setTempImages(mapped);
         nextIdRef.current = mapped.length + 1;
         setNextImageId(nextIdRef.current);
-      } catch {
+      } catch (error: unknown) {
         if (!active) return;
+        lockIfUnauthorized(error);
         setImageItems([]);
       } finally {
         if (active) {
@@ -90,7 +84,7 @@ export default function FormPanel() {
     return () => {
       active = false;
     };
-  }, [setTempImages, tempReloadToken]);
+  }, [setTempImages, tempReloadToken, password, lockIfUnauthorized]);
 
   useEffect(() => {
     setTempImages(imageItems);
@@ -143,15 +137,16 @@ export default function FormPanel() {
       );
 
       try {
-        await deleteTempImage(item.storagePath);
+        await deleteTempImage(password, item.storagePath);
       } catch (error: unknown) {
+        if (lockIfUnauthorized(error)) return;
         setImageItems((prev) =>
           prev.map((entry) =>
             entry.id === id
               ? {
                   ...entry,
                   isBusy: false,
-                  error: toErrorMessage(error, "Falha ao remover imagem em temp.")
+                  error: describeError(t, error)
                 }
               : entry
           )
@@ -185,10 +180,10 @@ export default function FormPanel() {
       const desiredName = target?.pendingName || file.name.replace(/\.[^.]+$/, "");
 
       if (target?.storagePath) {
-        await deleteTempImage(target.storagePath);
+        await deleteTempImage(password, target.storagePath);
       }
 
-      const uploaded = await uploadTempImage(file, desiredName);
+      const uploaded = await uploadTempImage(password, file, desiredName);
 
       setImageItems((prev) =>
         prev.map((entry) =>
@@ -206,13 +201,14 @@ export default function FormPanel() {
         )
       );
     } catch (error: unknown) {
+      if (lockIfUnauthorized(error)) return;
       setImageItems((prev) =>
         prev.map((entry) =>
           entry.id === id
             ? {
                 ...entry,
                 isBusy: false,
-                error: toErrorMessage(error, "Falha ao enviar imagem para temp.")
+                error: describeError(t, error)
               }
             : entry
         )
@@ -246,7 +242,7 @@ export default function FormPanel() {
     );
 
     try {
-      const renamed = await renameTempImage(item.storagePath, item.pendingName);
+      const renamed = await renameTempImage(password, item.storagePath, item.pendingName);
 
       setImageItems((prev) =>
         prev.map((entry) =>
@@ -264,13 +260,14 @@ export default function FormPanel() {
         )
       );
     } catch (error: unknown) {
+      if (lockIfUnauthorized(error)) return;
       setImageItems((prev) =>
         prev.map((entry) =>
           entry.id === id
             ? {
                 ...entry,
                 isBusy: false,
-                error: toErrorMessage(error, "Falha ao renomear imagem em temp.")
+                error: describeError(t, error)
               }
             : entry
         )
@@ -278,11 +275,14 @@ export default function FormPanel() {
     }
   }
 
+  // A post being edited may carry a category that is no longer configured.
+  const categoryOptions = categories.includes(draft.category) ? categories : [...categories, draft.category];
+
   return (
     <div className="form-panel">
       <section className="form-panel-top">
         <section className="form-panel-image-list">
-          {isLoadingTemp ? <div className="form-panel-image-loading">...carregando</div> : null}
+          {isLoadingTemp ? <div className="form-panel-image-loading">{t("form.loading")}</div> : null}
 
           {!isLoadingTemp
             ? imageItems.map((item) => (
@@ -306,11 +306,11 @@ export default function FormPanel() {
               ))
             : null}
         </section>
-        <button className="form-panel-button add_images" onClick={handleAddImageItem}>Adicionar imagens</button>
+        <button className="form-panel-button add_images" onClick={handleAddImageItem}>{t("form.addImages")}</button>
       </section>
 
       <section className="form-panel-bottom">
-        <InputLabel value="Tipo" />
+        <InputLabel value={t("form.type")} />
         <select
           name="type"
           id="type"
@@ -319,11 +319,12 @@ export default function FormPanel() {
           value={draft.category}
           onChange={(event) => setCategory(event.target.value)}
         >
-          <option value="BLOG">Blog</option>
-          <option value="PROMOCAO">Promocao</option>
+          {categoryOptions.map((category) => (
+            <option key={category} value={category}>{category}</option>
+          ))}
         </select>
 
-        <InputLabel value="Titulo" />
+        <InputLabel value={t("form.title")} />
         <input
           type="text"
           className="form-panel-input-text"
@@ -331,7 +332,7 @@ export default function FormPanel() {
           onChange={(event) => setTitle(event.target.value)}
         ></input>
 
-        <InputLabel value="Imagem do card" />
+        <InputLabel value={t("form.cardImage")} />
         <input
           ref={bannerInputRef}
           type="file"
@@ -340,7 +341,7 @@ export default function FormPanel() {
           onChange={(event) => setBanner(event.target.files?.[0] ?? null)}
         ></input>
 
-        <InputLabel value="Previa" />
+        <InputLabel value={t("form.excerpt")} />
         <textarea
           className="form-panel-preview"
           value={draft.preview}
@@ -348,7 +349,7 @@ export default function FormPanel() {
         ></textarea>
 
         <label className="form-panel-active-row" htmlFor="post-active-toggle">
-          <InputLabel value="Ativo" />
+          <InputLabel value={t("form.active")} />
           <input
             id="post-active-toggle"
             type="checkbox"
