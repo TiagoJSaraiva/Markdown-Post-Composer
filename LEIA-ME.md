@@ -289,8 +289,8 @@ Códigos de erro: `INVALID_ACTION` (400, `action` desconhecida ou `action` em m�
 ### Como as imagens funcionam
 
 1. Durante o rascunho, o admin envia as imagens para a **área temporária** (`temp_images`). Cada imagem tem um nome (por exemplo `image1`).
-2. O Markdown referencia a imagem por esse nome: `![alt](image1)`.
-3. Ao salvar, o admin envia as imagens junto com o formulário. O servidor as grava como `<postId>/<nome>.<ext>` no bucket de posts e reescreve `(image1)` para `(<postId>/image1.jpg)` no Markdown armazenado. O banner é gravado como `<postId>/banner_<timestamp>.<ext>`.
+2. O Markdown referencia a imagem por esse nome: `![alt](image1)`. `./image1`, `image1.jpg` e um título opcional (`![alt](image1 "Legenda")`) também funcionam. Só a sintaxe de imagem é reescrita: texto comum como `(image1)` não é alterado. A validação do admin, o preview e o servidor seguem as mesmas regras (`shared/domain/markdownImageRefs.ts`).
+3. Ao salvar, o admin envia as imagens junto com o formulário. O servidor as grava como `<postId>/<nome>.<ext>` no bucket de posts e reescreve a referência para `<postId>/image1.jpg` no Markdown armazenado, mantendo o título. O banner é gravado como `<postId>/banner_<timestamp>.<ext>`.
 4. Na leitura, o SDK / `MarkdownRenderer` resolve esses caminhos relativos para URLs públicas do Storage (`<storagePublicUrl>/<bucket>/<postId>/image1.jpg`). URLs absolutas não são alteradas.
 
 ## Modelo de segurança e limitações

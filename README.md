@@ -289,8 +289,8 @@ Error codes: `INVALID_ACTION` (400, unknown `action` or `action` on a non-POST),
 ### How images work
 
 1. While drafting, the admin uploads images to the **temp workspace** (`temp_images`). Each image has a name (for example `image1`).
-2. The Markdown refers to the image by that name: `![alt](image1)`.
-3. On save, the admin sends the images with the form. The server stores them as `<postId>/<name>.<ext>` in the posts bucket and rewrites `(image1)` to `(<postId>/image1.jpg)` in the stored Markdown. The banner is stored as `<postId>/banner_<timestamp>.<ext>`.
+2. The Markdown refers to the image by that name: `![alt](image1)`. `./image1`, `image1.jpg` and an optional title (`![alt](image1 "Caption")`) also work. Only image syntax is rewritten: plain text such as `(image1)` is left alone. The admin validation, its live preview and the server share these rules (`shared/domain/markdownImageRefs.ts`).
+3. On save, the admin sends the images with the form. The server stores them as `<postId>/<name>.<ext>` in the posts bucket and rewrites the reference to `<postId>/image1.jpg` in the stored Markdown, keeping the title. The banner is stored as `<postId>/banner_<timestamp>.<ext>`.
 4. When reading, the SDK / `MarkdownRenderer` resolves those relative paths to public Storage URLs (`<storagePublicUrl>/<bucket>/<postId>/image1.jpg`). Absolute URLs are left untouched.
 
 ## Security model and limitations
