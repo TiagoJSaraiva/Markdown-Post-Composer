@@ -1,5 +1,6 @@
--- MDPostComposer initial schema.
--- Only the service role (used by the edge functions) touches these objects:
+-- MDPostComposer initial schema: the `posts` table, its updated_at trigger and
+-- the default Storage buckets used by the Edge Functions.
+-- Only the service role (used by the Edge Functions) touches these objects:
 -- RLS is enabled with no policies, and no anon/authenticated storage policies exist.
 
 create table public.posts (
