@@ -1,0 +1,17 @@
+{
+  "name": "md-post-composer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pluggable Markdown post composer: Supabase Edge Functions API + React admin panel.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "dev": "pnpm -C admin dev",
+    "build": "pnpm -C admin build",
+    "lint": "pnpm -C admin lint",
+    "supabase": "supabase"
+  },
+  "devDependencies": {
+    "supabase": "^2.77.0"
+  }
+}

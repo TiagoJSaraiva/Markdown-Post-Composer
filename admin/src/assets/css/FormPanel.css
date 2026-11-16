@@ -1,0 +1,136 @@
+.form-panel {
+  background-color: var(--bg-page);
+  border: none;
+  padding: 10px;
+  box-sizing: border-box;
+  height: calc(100vh - 24px);
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.form-panel-top {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+}
+
+.form-panel-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.form-panel-image-list {
+  min-height: 130px;
+  flex: 1;
+  border: none;
+  background-color: var(--bg-input);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  overflow-y: auto;
+  
+}
+
+.form-panel-image-list::-webkit-scrollbar {
+  display: none;
+}
+
+.form-panel-image-loading {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.form-panel-select {
+  border: none;
+  height: 38px;
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  padding: 0 34px 0 8px;
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+  box-shadow: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23b7c7e4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 8 10 12 14 8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 25px;
+}
+
+.form-panel-select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.form-panel-active-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: fit-content;
+}
+
+.form-panel-active-row .input-label {
+  font-size: 24px;
+}
+
+.form-panel-active-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 7px;
+  accent-color: var(--button-bg);
+}
+
+.form-panel-input-text {
+  border: none;
+  height: 38px;
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  padding: 0 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.form-panel-input-file {
+  border: none;
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  padding: 6px;
+  font-size: 14px;
+}
+
+.form-panel-preview {
+  min-height: 104px;
+  resize: none;
+  border: none;
+  background-color: var(--bg-input);
+  padding: 8px;
+  font-size: 15px;
+  color: var(--text-main);
+}
+
+.form-panel-button {
+  border: none;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 700;
+  padding: 4px 14px;
+  font-size: 16px;
+  cursor: pointer;
+  align-self: flex-start;
+}
