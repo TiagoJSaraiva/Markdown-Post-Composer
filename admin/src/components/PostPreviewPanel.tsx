@@ -157,7 +157,7 @@ export default function PostPreviewPanel() {
     try {
       await clearTempImages(password);
 
-      const postResult = await loadPostService(editTargetPost.id);
+      const postResult = await loadPostService(editTargetPost.id, password);
 
       if (!postResult.ok) {
         throw new ApiError(postResult.status, postResult.error, postResult.details);

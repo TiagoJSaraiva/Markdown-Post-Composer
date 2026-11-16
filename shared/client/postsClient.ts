@@ -30,13 +30,18 @@ export type ListPostsOptions = {
   adminPassword?: string
 }
 
+export type GetPostOptions = {
+  /** Required to load an inactive post; sent as X-Admin-Password. */
+  adminPassword?: string
+}
+
 export type GetPostBySlugOptions = {
   category?: string
 }
 
 export type PostsClient = {
   listPosts(options?: ListPostsOptions): Promise<PostsClientResult<PostCard[]>>
-  getPost(id: string): Promise<PostsClientResult<PostDetails>>
+  getPost(id: string, options?: GetPostOptions): Promise<PostsClientResult<PostDetails>>
   getPostBySlug(slug: string, options?: GetPostBySlugOptions): Promise<PostsClientResult<PostDetails>>
   buildPublicUrl(path: string): string
   resolveMarkdownAssetUrl(url: string): string
@@ -123,8 +128,12 @@ export function createPostsClient(options: PostsClientOptions): PostsClient {
     return { ok: true, data: result.data.filter((card) => card.post_type.toLowerCase() === wanted) }
   }
 
-  function getPost(id: string): Promise<PostsClientResult<PostDetails>> {
-    return request<PostDetails>("load_post", { id }, {}, isLoadPostSuccessResponse)
+  function getPost(id: string, getOptions: GetPostOptions = {}): Promise<PostsClientResult<PostDetails>> {
+    const headers: Record<string, string> = getOptions.adminPassword
+      ? { "X-Admin-Password": getOptions.adminPassword }
+      : {}
+
+    return request<PostDetails>("load_post", { id }, headers, isLoadPostSuccessResponse)
   }
 
   async function getPostBySlug(

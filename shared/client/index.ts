@@ -2,6 +2,7 @@ export { createPostsClient, DEFAULT_POSTS_BUCKET } from "./postsClient.ts"
 export type {
   FetchLike,
   GetPostBySlugOptions,
+  GetPostOptions,
   ListPostsOptions,
   PostsClient,
   PostsClientOptions,

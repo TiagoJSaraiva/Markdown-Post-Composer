@@ -1,6 +1,8 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
 import type { LoadPostSuccessResponse, PostDetails } from "@shared/contracts/loadPost.ts"
+import { ADMIN_PASSWORD_HEADER } from "@shared/constants/http.ts"
+import { assertAdminPassword } from "../_lib/auth.ts"
 import { appError } from "../_lib/errors.ts"
 import { createHandler, jsonResponse } from "../_lib/http.ts"
 import { POST_DETAIL_COLUMNS, findPostById } from "../_lib/postsRepository.ts"
@@ -17,6 +19,16 @@ Deno.serve(createHandler({ methods: ["GET"] }, async ({ req, config, jsonHeaders
 
   if (!post) {
     throw appError(POST_ERROR_CODES.POST_NOT_FOUND)
+  }
+
+  // Inactive posts are private. Without a password they look nonexistent,
+  // so their ids cannot be probed; with one, it must be the right one.
+  if (!post.active) {
+    if (!req.headers.has(ADMIN_PASSWORD_HEADER)) {
+      throw appError(POST_ERROR_CODES.POST_NOT_FOUND)
+    }
+
+    await assertAdminPassword(req, config)
   }
 
   const bucket = config.postsBucket
