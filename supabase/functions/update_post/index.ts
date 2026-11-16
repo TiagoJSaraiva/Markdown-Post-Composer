@@ -162,7 +162,14 @@ Deno.serve(async (req) => {
 
     const removePaths = existingPaths.filter(path => !keepPaths.has(path))
 
-    await deleteFiles(removePaths)
+    // The row is already committed and references the new files: removing the
+    // old ones is best-effort and must not fail the request or trigger the
+    // rollback in the catch below.
+    try {
+      await deleteFiles(removePaths)
+    } catch (cleanupError) {
+      console.error("Failed to remove replaced post files after update", cleanupError)
+    }
 
     return new Response(
       JSON.stringify({
