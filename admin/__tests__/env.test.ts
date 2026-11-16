@@ -1,3 +1,6 @@
+/*
+ * Tests of the environment parsing: required URLs, defaults, categories and locale.
+ */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_TITLE, parseEnv, resolveLocale } from "../src/config/env";
 

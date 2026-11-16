@@ -1,3 +1,6 @@
+/*
+ * Tests of ApiError, the 401 helpers and the parsing of coded error bodies.
+ */
 import { describe, expect, it } from "vitest";
 import { ApiError, isUnauthorizedError, isUnauthorizedStatus, parseErrorBody } from "../src/lib/apiError";
 

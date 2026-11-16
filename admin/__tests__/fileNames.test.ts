@@ -1,3 +1,6 @@
+/*
+ * Tests of the file name helpers (extension stripping, storage path file name).
+ */
 import { describe, expect, it } from "vitest";
 import { getFileNameFromPath, stripExtension } from "../src/utils/fileNames";
 

@@ -1,3 +1,7 @@
+/*
+ * Tests of the draft helpers: pre-save validation, unsaved-changes detection,
+ * preview markdown and image alias rules.
+ */
 import { describe, expect, it } from "vitest";
 import {
   buildPreviewMarkdown,

@@ -1,3 +1,7 @@
+/*
+ * Tests of the markdown image helpers: reference parsing, storage path
+ * extraction and the reverse rewrite used when a post is loaded for editing.
+ */
 import { describe, expect, it } from "vitest";
 import {
   extractRelativeImagePathsFromMarkdown,

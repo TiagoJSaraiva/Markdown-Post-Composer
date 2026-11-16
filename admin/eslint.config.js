@@ -1,3 +1,7 @@
+/*
+ * ESLint flat configuration of the admin package (TypeScript, React hooks and
+ * React Refresh rules). Run with `pnpm -C admin lint`.
+ */
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

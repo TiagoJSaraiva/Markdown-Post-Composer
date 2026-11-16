@@ -1,3 +1,7 @@
+/*
+ * Tests of the dictionaries (key and placeholder parity between locales) and of the
+ * backend error code to message mapping in both locales.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { POST_ERROR_CODES } from "@mdpc/shared/contracts/postErrorCodes.ts";
 import { en, type MessageKey } from "../src/i18n/en";
