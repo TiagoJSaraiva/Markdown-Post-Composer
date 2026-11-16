@@ -1,3 +1,6 @@
+/*
+ * Vitest tests for services/requestHelpers.ts.
+ */
 import { describe, expect, it } from "vitest"
 import {
   buildAdminHeaders,

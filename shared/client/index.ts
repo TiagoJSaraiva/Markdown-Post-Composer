@@ -1,3 +1,7 @@
+/*
+ * Public entry point of the read SDK (@mdpc/shared/client): posts client,
+ * storage URL helpers and the post types.
+ */
 export { createPostsClient, DEFAULT_POSTS_BUCKET } from "./postsClient.ts"
 export type {
   FetchLike,

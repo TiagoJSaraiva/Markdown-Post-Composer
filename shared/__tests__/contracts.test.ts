@@ -1,3 +1,6 @@
+/*
+ * Vitest tests for the runtime guards in contracts/.
+ */
 import { describe, expect, it } from "vitest"
 import { isLoadCardsSuccessResponse, isPostCard } from "../contracts/loadCards.ts"
 import { isLoadPostSuccessResponse, isPostDetails } from "../contracts/loadPost.ts"

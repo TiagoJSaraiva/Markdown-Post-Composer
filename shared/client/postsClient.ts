@@ -1,15 +1,26 @@
+/*
+ * Read-only SDK for the public Edge Functions (load_cards, load_post).
+ * createPostsClient wraps fetch and returns typed results instead of throwing.
+ */
 import { isLoadCardsSuccessResponse } from "../contracts/loadCards.ts"
 import type { PostCard } from "../contracts/loadCards.ts"
 import { isLoadPostSuccessResponse } from "../contracts/loadPost.ts"
 import type { PostDetails } from "../contracts/loadPost.ts"
 import { buildStoragePublicUrl, resolveMarkdownAssetUrl, trimTrailingSlashes } from "./storageUrls.ts"
 
+/**
+ * Outcome of a client call; it never throws. On failure, `status` is the HTTP
+ * status (0 for network errors) and `error` is an Edge Function error code,
+ * `NETWORK_ERROR` or `INVALID_RESPONSE`.
+ */
 export type PostsClientResult<T> =
   | { ok: true; data: T }
   | { ok: false; status: number; error: string; details?: Record<string, unknown> }
 
+/** Minimal fetch signature, so tests and non-browser runtimes can inject their own. */
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
+/** Options of createPostsClient. */
 export type PostsClientOptions = {
   /** e.g. https://<ref>.supabase.co/functions/v1 */
   functionsUrl: string
@@ -17,36 +28,49 @@ export type PostsClientOptions = {
   storagePublicUrl: string
   /** Defaults to "post-images". */
   postsBucket?: string
+  /** Defaults to the global `fetch`. */
   fetch?: FetchLike
   /** Extra headers sent with every request (e.g. apikey/Authorization). */
   headers?: Record<string, string>
 }
 
+/** Options of PostsClient.listPosts. */
 export type ListPostsOptions = {
   /** Case-insensitive client-side filter on post_type. */
   category?: string
+  /** Also list inactive posts; requires `adminPassword`. */
   includeInactive?: boolean
   /** Sent as X-Admin-Password when provided. */
   adminPassword?: string
 }
 
+/** Options of PostsClient.getPost. */
 export type GetPostOptions = {
   /** Required to load an inactive post; sent as X-Admin-Password. */
   adminPassword?: string
 }
 
+/** Options of PostsClient.getPostBySlug. */
 export type GetPostBySlugOptions = {
+  /** Restricts the slug lookup to one category (case-insensitive). */
   category?: string
 }
 
+/** Read client returned by createPostsClient. */
 export type PostsClient = {
+  /** Lists post cards (load_cards), newest first. */
   listPosts(options?: ListPostsOptions): Promise<PostsClientResult<PostCard[]>>
+  /** Loads one post by id (load_post). */
   getPost(id: string, options?: GetPostOptions): Promise<PostsClientResult<PostDetails>>
+  /** Finds a post by slug in the public list, then loads it; 404 POST_NOT_FOUND when absent. */
   getPostBySlug(slug: string, options?: GetPostBySlugOptions): Promise<PostsClientResult<PostDetails>>
+  /** Public Storage URL of a path in the posts bucket. */
   buildPublicUrl(path: string): string
+  /** Rewrites a relative Markdown asset URL to its public Storage URL; absolute URLs are untouched. */
   resolveMarkdownAssetUrl(url: string): string
 }
 
+/** Posts bucket used when `postsBucket` is not given. */
 export const DEFAULT_POSTS_BUCKET = "post-images"
 
 type Failure = { ok: false; status: number; error: string; details?: Record<string, unknown> }
@@ -70,6 +94,20 @@ function readErrorBody(body: unknown): { error?: string; details?: Record<string
   return { error, details }
 }
 
+/**
+ * Creates a read-only client for the public Edge Functions.
+ *
+ * @param options - Function and Storage base URLs, plus optional bucket, fetch and headers.
+ * @returns The client. Its methods resolve to a PostsClientResult and do not throw.
+ * @example
+ * const client = createPostsClient({
+ *   functionsUrl: "https://<ref>.supabase.co/functions/v1",
+ *   storagePublicUrl: "https://<ref>.supabase.co/storage/v1/object/public",
+ *   headers: { apikey: "<anon key>" }
+ * })
+ * const result = await client.listPosts({ category: "blog" })
+ * if (result.ok) console.log(result.data.map((card) => card.title))
+ */
 export function createPostsClient(options: PostsClientOptions): PostsClient {
   const functionsUrl = trimTrailingSlashes(options.functionsUrl.trim())
   const bucket = options.postsBucket?.trim() || DEFAULT_POSTS_BUCKET

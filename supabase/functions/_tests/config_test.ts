@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/config.ts (defaults, validation, memoization).
+ */
 import { assert, assertEquals } from "@std/assert"
 
 const VARS = [

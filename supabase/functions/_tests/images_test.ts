@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/images.ts (validation, naming, path replacement).
+ */
 import { assertEquals, assertThrows } from "@std/assert"
 import { MAX_IMAGE_BYTES } from "@shared/constants/images.ts"
 import { AppError } from "../_lib/errors.ts"

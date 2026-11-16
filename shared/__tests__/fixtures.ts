@@ -1,3 +1,6 @@
+/*
+ * Sample PostCard and PostDetails objects shared by the shared-package tests.
+ */
 export const card = {
   id: "1",
   title: "T",

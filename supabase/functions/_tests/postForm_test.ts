@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/postForm.ts (create/update form parsing).
+ */
 import { assertEquals, assertThrows } from "@std/assert"
 import { AppError } from "../_lib/errors.ts"
 import { parseActiveValue, parseCreatePostForm, parseUpdatePostForm } from "../_lib/postForm.ts"

@@ -1,3 +1,8 @@
+/*
+ * Edge Function create_post. POST, multipart form, admin password required.
+ * Uploads banner and images, inserts the post and answers
+ * { success, message: POST_CREATED, id }. Uploaded files are removed if a later step fails.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"
 import { createHandler, jsonResponse, readFormData } from "../_lib/http.ts"

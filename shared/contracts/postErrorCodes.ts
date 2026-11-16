@@ -1,3 +1,8 @@
+/*
+ * Error codes returned by the Edge Functions in `{ error }`. The HTTP status of
+ * each code lives in supabase/functions/_lib/errors.ts; the admin maps them to messages.
+ */
+/** Every error code the Edge Functions can return in `{ error }`. */
 export const POST_ERROR_CODES = {
   METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED",
   FORBIDDEN_ORIGIN: "FORBIDDEN_ORIGIN",
@@ -28,9 +33,12 @@ export const POST_ERROR_CODES = {
   POST_IMAGE_NOT_FOUND: "POST_IMAGE_NOT_FOUND",
 } as const
 
+/** Union of the values of POST_ERROR_CODES. */
 export type PostErrorCode = (typeof POST_ERROR_CODES)[keyof typeof POST_ERROR_CODES]
 
+/** Error body returned by every Edge Function. */
 export type ErrorResponse<TError extends string = PostErrorCode> = {
   error: TError
+  /** Extra data about the error (e.g. the offending file name). */
   details?: Record<string, unknown>
 }

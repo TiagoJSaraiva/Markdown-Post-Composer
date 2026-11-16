@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/cors.ts and _lib/auth.ts.
+ */
 import { assertEquals, assertRejects } from "@std/assert"
 import { AppError } from "../_lib/errors.ts"
 import { assertAdminPassword, safeEqual } from "../_lib/auth.ts"

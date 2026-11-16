@@ -1,3 +1,6 @@
+/*
+ * Vitest tests for domain/postCategory.ts and domain/tempImageNaming.ts.
+ */
 import { describe, expect, it } from "vitest"
 import {
   isValidCategoryName,

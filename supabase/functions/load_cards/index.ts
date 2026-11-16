@@ -1,3 +1,7 @@
+/*
+ * Edge Function load_cards. GET, public for active posts; ?include_inactive=true
+ * requires the admin password. Answers { success, data: PostCard[] }, newest first.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import type { LoadCardsSuccessResponse, PostCard } from "@shared/contracts/loadCards.ts"
 import { assertAdminPassword } from "../_lib/auth.ts"

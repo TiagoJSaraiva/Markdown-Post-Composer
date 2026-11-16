@@ -1,29 +1,41 @@
+/*
+ * Parsing and validation of the multipart forms sent to create_post and
+ * update_post. Pure: operates on a FormData and returns typed fields.
+ */
 import { POST_ERROR_CODES } from "../../../shared/contracts/postErrorCodes.ts"
 import { normalizePostCategory } from "../../../shared/domain/postCategory.ts"
 import { appError } from "./errors.ts"
 
-// Pure parsing and validation of the create/update multipart forms.
-
+/** Fields shared by the create and update forms, already validated. */
 export type PostFormFields = {
+  /** Upper-case category, one of the configured categories. */
   category: string
   title: string
   preview: string
   contentMarkdown: string
   active: boolean
+  /** Content images referenced from the markdown. */
   images: File[]
 }
 
+/** Parsed create_post form; the banner is required. */
 export type CreatePostForm = PostFormFields & {
   banner: File
 }
 
+/** Parsed update_post form. */
 export type UpdatePostForm = PostFormFields & {
   id: string
-  // null keeps the current banner.
+  /** `null` keeps the current banner. */
   banner: File | null
 }
 
-// "true" / "false" (any case, trimmed); null for anything else.
+/**
+ * Parses the `active` form field.
+ *
+ * @param value - Raw field value.
+ * @returns `true` or `false` for "true"/"false" (any case, trimmed), `null` otherwise.
+ */
 export function parseActiveValue(value: string): boolean | null {
   const normalized = value.trim().toLowerCase()
 
@@ -78,7 +90,15 @@ function parseCommonFields(form: FormData, categories: readonly string[]): PostF
   }
 }
 
-// Fields: category, title, preview, content_markdown, active, banner (file), images (files).
+/**
+ * Parses the create_post form. Fields: category, title, preview,
+ * content_markdown, active, banner (file) and images (files).
+ *
+ * @param form - Request form data.
+ * @param categories - Allowed categories.
+ * @returns The validated fields.
+ * @throws {AppError} `INVALID_FORM_DATA` when a field is missing, has the wrong type or is invalid.
+ */
 export function parseCreatePostForm(form: FormData, categories: readonly string[]): CreatePostForm {
   const banner = form.get("banner")
 
@@ -89,7 +109,14 @@ export function parseCreatePostForm(form: FormData, categories: readonly string[
   return { ...parseCommonFields(form, categories), banner }
 }
 
-// Same fields plus id; banner is optional.
+/**
+ * Parses the update_post form: the create fields plus `id`, with an optional banner.
+ *
+ * @param form - Request form data.
+ * @param categories - Allowed categories.
+ * @returns The validated fields.
+ * @throws {AppError} `INVALID_FORM_DATA` when a field is missing, has the wrong type or is invalid.
+ */
 export function parseUpdatePostForm(form: FormData, categories: readonly string[]): UpdatePostForm {
   const id = form.get("id")
   const banner = form.get("banner")

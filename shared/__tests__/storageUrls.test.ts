@@ -1,3 +1,6 @@
+/*
+ * Vitest tests for client/storageUrls.ts.
+ */
 import { describe, expect, it } from "vitest"
 import {
   buildStoragePublicUrl,
