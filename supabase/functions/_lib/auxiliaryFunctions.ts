@@ -10,10 +10,13 @@ export function generateUUID() {
 
 export function slugify(title: string) {
 	return title
+		.normalize("NFD")
+		.replace(/\p{M}/gu, "")
 		.toLowerCase()
 		.trim()
 		.replace(/[^\w\s-]/g, "")
-		.replace(/\s+/g, "-")
+		.replace(/[\s-]+/g, "-")
+		.replace(/^-+|-+$/g, "")
 }
 
 export function escapeRegExp(value: string) {
