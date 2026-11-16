@@ -1,7 +1,17 @@
+/*
+ * Slug generation from post titles. Used by create_post and update_post.
+ */
 import { POST_ERROR_CODES } from "../../../shared/contracts/postErrorCodes.ts"
 import { appError } from "./errors.ts"
 
-// Lower-case, accent-free, dash-separated slug: "Promoção Nova!" -> "promocao-nova".
+/**
+ * Builds a lower-case, accent-free, dash-separated slug.
+ *
+ * @param title - Post title.
+ * @returns The slug, possibly empty when the title has no usable characters.
+ * @example
+ * slugify("Crème Brûlée Recipe!") // "creme-brulee-recipe"
+ */
 export function slugify(title: string): string {
   return title
     .normalize("NFD")
@@ -13,7 +23,13 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, "")
 }
 
-// Throws INVALID_TITLE when the title leaves nothing to build a slug from.
+/**
+ * Builds the slug of a title, requiring it to be non-empty.
+ *
+ * @param title - Post title.
+ * @returns The slug.
+ * @throws {AppError} `INVALID_TITLE` when the title leaves nothing to build a slug from.
+ */
 export function requireSlug(title: string): string {
   const slug = slugify(title)
 

@@ -1,3 +1,7 @@
+/*
+ * Environment configuration of the Edge Functions (MDPC_* variables).
+ * Validated once and memoized by getConfig(); every handler reads it through createHandler.
+ */
 import {
   DEFAULT_POST_CATEGORIES,
   isValidCategoryName,
@@ -5,17 +9,32 @@ import {
 } from "../../../shared/domain/postCategory.ts"
 import { resolvePostImagesBucket, resolveTempBucket } from "../../../shared/constants/storage.ts"
 
+/** Validated runtime configuration read from the MDPC_* environment variables. */
 export type FunctionConfig = {
+  /** MDPC_ADMIN_PASSWORD: required, trimmed, never empty. */
   adminPassword: string
+  /** MDPC_ALLOWED_ORIGINS: normalized origins (comma separated in the variable); empty denies every browser origin. */
   allowedOrigins: string[]
+  /** MDPC_POST_CATEGORIES: upper-case category names; defaults to DEFAULT_POST_CATEGORIES. */
   categories: string[]
+  /** MDPC_POSTS_BUCKET: bucket holding post images. */
   postsBucket: string
+  /** MDPC_TEMP_BUCKET: bucket holding temp images. */
   tempBucket: string
 }
 
+/**
+ * A missing or invalid environment variable. Handlers answer it as
+ * 500 SERVER_MISCONFIGURED; the message goes to the logs, never to the client.
+ */
 export class ConfigError extends Error {
+  /** Name of the offending environment variable. */
   variable: string
 
+  /**
+   * @param variable - Name of the offending environment variable.
+   * @param reason - What is wrong with it.
+   */
   constructor(variable: string, reason: string) {
     super(`${variable}: ${reason}`)
     this.name = "ConfigError"
@@ -89,8 +108,13 @@ function readConfig(): FunctionConfig {
   }
 }
 
-// Reads and validates the environment once (memoized). Throws ConfigError when
-// invalid; a failed read is not cached, so fixed secrets apply immediately.
+/**
+ * Reads and validates the environment once (memoized). A failed read is not
+ * cached, so fixed secrets apply immediately.
+ *
+ * @returns The validated configuration.
+ * @throws {ConfigError} When a variable is missing or invalid.
+ */
 export function getConfig(): FunctionConfig {
   if (!cachedConfig) {
     cachedConfig = readConfig()

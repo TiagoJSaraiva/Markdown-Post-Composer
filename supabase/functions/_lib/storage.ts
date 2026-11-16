@@ -1,19 +1,30 @@
+/*
+ * Thin wrapper over Supabase Storage (upload, list, move, copy, remove, public
+ * URL) with error classification. Used by the post handlers and temp_images.
+ */
 import { imageTooLarge, invalidImageType } from "./errors.ts"
 import { getSupabase } from "./supabaseClient.ts"
 
 const LIST_PAGE_SIZE = 100
 const REMOVE_CHUNK_SIZE = 100
 
+/** An entry returned by Storage listings. */
 export type StorageObject = {
   name: string
+  /** `null` for folders. */
   id: string | null
 }
 
+/** Options of uploadFile. */
 export type UploadOptions = {
+  /** Overwrite an existing object (default false). */
   upsert?: boolean
-  // Translate "mime type" / "size limit" rejections from Storage into
-  // INVALID_IMAGE_TYPE / IMAGE_TOO_LARGE (default true).
+  /**
+   * Translate "mime type" / "size limit" rejections from Storage into
+   * INVALID_IMAGE_TYPE / IMAGE_TOO_LARGE (default true).
+   */
   mapErrors?: boolean
+  /** Content type to store; defaults to the one Storage infers. */
   contentType?: string
 }
 
@@ -28,22 +39,51 @@ function storageMessage(error: unknown): string {
   return String((error as { message?: unknown } | null)?.message ?? "").toLowerCase()
 }
 
+/**
+ * Tells whether a Storage error means the object does not exist.
+ *
+ * @param error - Error returned by Storage.
+ * @returns `true` for a 404 or a "not found" message.
+ */
 export function isStorageNotFound(error: unknown): boolean {
   return storageStatus(error) === 404 || storageMessage(error).includes("not found")
 }
 
+/**
+ * Tells whether a Storage error means the object already exists.
+ *
+ * @param error - Error returned by Storage.
+ * @returns `true` for a 409, "already exists" or "duplicate" message.
+ */
 export function isStorageConflict(error: unknown): boolean {
   const message = storageMessage(error)
 
   return storageStatus(error) === 409 || message.includes("already exists") || message.includes("duplicate")
 }
 
+/**
+ * Builds the public URL of an object (the bucket must be public).
+ *
+ * @param bucket - Bucket name.
+ * @param path - Object path.
+ * @returns The public URL.
+ */
 export function getPublicUrl(bucket: string, path: string): string {
   const { data } = getSupabase().storage.from(bucket).getPublicUrl(path)
 
   return data.publicUrl
 }
 
+/**
+ * Uploads a file to Storage.
+ *
+ * @param bucket - Bucket name.
+ * @param path - Destination object path.
+ * @param file - File to upload.
+ * @param options - Upload options.
+ * @throws {AppError} `INVALID_IMAGE_TYPE` or `IMAGE_TOO_LARGE` when `mapErrors`
+ *   is on and Storage rejects the file; any other Storage error is rethrown.
+ */
 export async function uploadFile(
   bucket: string,
   path: string,
@@ -74,9 +114,15 @@ export async function uploadFile(
   throw error
 }
 
-// Removes the paths in chunks and returns how many objects Storage deleted.
-// Throws the Storage error, so best-effort callers must catch it (or use
-// removeFilesQuietly).
+/**
+ * Removes objects in chunks. Best-effort callers must catch the error or use
+ * removeFilesQuietly.
+ *
+ * @param bucket - Bucket name.
+ * @param paths - Object paths to remove.
+ * @returns How many objects Storage deleted.
+ * @throws The Storage error when a removal fails.
+ */
 export async function removeFiles(bucket: string, paths: string[]): Promise<number> {
   let deleted = 0
 
@@ -94,7 +140,13 @@ export async function removeFiles(bucket: string, paths: string[]): Promise<numb
   return deleted
 }
 
-// Best-effort removal for cleanups that must never fail the request: errors are logged.
+/**
+ * Best-effort removal for cleanups that must never fail the request: errors are logged.
+ *
+ * @param bucket - Bucket name.
+ * @param paths - Object paths to remove.
+ * @param context - Label included in the log message.
+ */
 export async function removeFilesQuietly(bucket: string, paths: string[], context: string): Promise<void> {
   try {
     await removeFiles(bucket, paths)
@@ -103,7 +155,14 @@ export async function removeFilesQuietly(bucket: string, paths: string[], contex
   }
 }
 
-// Lists every object directly under `folder` ("" for the bucket root), page by page.
+/**
+ * Lists every object directly under a folder, page by page.
+ *
+ * @param bucket - Bucket name.
+ * @param folder - Folder path, or "" for the bucket root.
+ * @returns All entries, sorted by name.
+ * @throws The Storage error when a listing fails.
+ */
 export async function listAllObjects(bucket: string, folder: string): Promise<StorageObject[]> {
   const objects: StorageObject[] = []
   let offset = 0
@@ -132,7 +191,14 @@ export async function listAllObjects(bucket: string, folder: string): Promise<St
   return objects
 }
 
-// Full paths (`<postId>/<file>`) of everything stored for a post.
+/**
+ * Lists everything stored for a post.
+ *
+ * @param bucket - Posts bucket.
+ * @param postId - Post id (the folder name).
+ * @returns Full object paths (`<postId>/<file>`).
+ * @throws The Storage error when the listing fails.
+ */
 export async function listPostFilePaths(bucket: string, postId: string): Promise<string[]> {
   const objects = await listAllObjects(bucket, postId)
 
@@ -141,12 +207,29 @@ export async function listPostFilePaths(bucket: string, postId: string): Promise
     .map((item) => `${postId}/${item.name}`)
 }
 
+/**
+ * Moves (renames) an object inside a bucket.
+ *
+ * @param bucket - Bucket name.
+ * @param from - Current path.
+ * @param to - New path.
+ * @throws The Storage error when the move fails.
+ */
 export async function moveFile(bucket: string, from: string, to: string): Promise<void> {
   const { error } = await getSupabase().storage.from(bucket).move(from, to)
 
   if (error) throw error
 }
 
+/**
+ * Copies an object, possibly into another bucket.
+ *
+ * @param sourceBucket - Bucket of the source object.
+ * @param sourcePath - Source object path.
+ * @param destinationBucket - Bucket of the copy.
+ * @param destinationPath - Path of the copy.
+ * @throws The Storage error when the copy fails.
+ */
 export async function copyFile(
   sourceBucket: string,
   sourcePath: string,
