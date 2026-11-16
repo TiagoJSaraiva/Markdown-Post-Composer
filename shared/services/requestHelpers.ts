@@ -1,4 +1,5 @@
-import type { BuildPostFormDataParams } from "@shared/types/post"
+import { ADMIN_PASSWORD_HEADER } from "../constants/http.ts"
+import type { BuildPostFormDataParams } from "../types/post.ts"
 
 export type ServiceResult = {
   status: number
@@ -20,6 +21,14 @@ export function getPasswordRequiredError(password: string): ServiceResult | null
   return null
 }
 
+export function buildAdminHeaders(password: string, extra?: HeadersInit): Headers {
+  const headers = new Headers(extra)
+
+  headers.set(ADMIN_PASSWORD_HEADER, password)
+
+  return headers
+}
+
 export function buildPostFormData(params: BuildPostFormDataParams): FormData {
   const {
     id,
@@ -30,7 +39,6 @@ export function buildPostFormData(params: BuildPostFormDataParams): FormData {
     active,
     banner,
     images,
-    password,
   } = params
 
   const form = new FormData()
@@ -52,8 +60,6 @@ export function buildPostFormData(params: BuildPostFormDataParams): FormData {
   for (const image of images) {
     form.append("images", image.file, image.name)
   }
-
-  form.append("password", password)
 
   return form
 }

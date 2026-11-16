@@ -1,6 +1,6 @@
-import type { PostCategoryInput } from "@shared/domain/postCategory.ts"
-import type { ErrorResponse } from "@shared/contracts/postErrorCodes.ts"
-import { hasStringField, isObjectRecord, isStringArray } from "@shared/utils/objectGuards.ts"
+import type { PostCategoryInput } from "../domain/postCategory.ts"
+import type { ErrorResponse } from "./postErrorCodes.ts"
+import { hasStringField, isObjectRecord, isStringArray } from "../utils/objectGuards.ts"
 
 export type PostDetails = {
   id: string

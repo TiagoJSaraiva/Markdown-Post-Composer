@@ -1,6 +1,6 @@
-import type { PostCategoryInput } from "@shared/domain/postCategory.ts"
-import type { ErrorResponse } from "@shared/contracts/postErrorCodes.ts"
-import { isObjectRecord } from "@shared/utils/objectGuards.ts"
+import type { PostCategoryInput } from "../domain/postCategory.ts"
+import type { ErrorResponse } from "./postErrorCodes.ts"
+import { isObjectRecord } from "../utils/objectGuards.ts"
 
 export type PostCard = {
   id: string
