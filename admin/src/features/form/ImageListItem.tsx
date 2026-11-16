@@ -36,6 +36,7 @@ export default function ImageListItem({
         <StyledFileInput
           text={hasSelectedFile ? t("image.replace") : t("image.choose")}
           accept="image/*"
+          disabled={isBusy}
           onFileSelect={(file) => onPickFile(id, file)}
         />
 
@@ -46,6 +47,7 @@ export default function ImageListItem({
               className="image-list-item-name-input"
               placeholder={t("image.namePlaceholder")}
               value={displayName}
+              disabled={isBusy}
               onChange={(event) => onChangeName(id, event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {

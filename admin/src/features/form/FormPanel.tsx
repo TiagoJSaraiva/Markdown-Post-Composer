@@ -12,7 +12,7 @@ export default function FormPanel() {
   const { draft, setCategory, setTitle, setPreview, setActive, setBanner } = usePostDraft();
   const { t } = useI18n();
   const { categories } = getConfig();
-  const { items, isLoading, addItem, removeItem, pickFile, changeName, confirmName } = useTempImages();
+  const { items, isLoading, loadError, addItem, removeItem, pickFile, changeName, confirmName } = useTempImages();
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -29,6 +29,8 @@ export default function FormPanel() {
       <section className="form-panel-top">
         <section className="form-panel-image-list">
           {isLoading ? <div className="form-panel-image-loading">{t("form.loading")}</div> : null}
+
+          {!isLoading && loadError ? <div className="form-panel-image-loading">{loadError}</div> : null}
 
           {!isLoading
             ? items.map((item) => (
@@ -48,7 +50,7 @@ export default function FormPanel() {
               ))
             : null}
         </section>
-        <button type="button" className="form-panel-button add_images" onClick={addItem}>{t("form.addImages")}</button>
+        <button type="button" className="form-panel-button add_images" onClick={addItem} disabled={isLoading}>{t("form.addImages")}</button>
       </section>
 
       <section className="form-panel-bottom">

@@ -22,7 +22,8 @@ export function useTempImages() {
   const password = useAdminPassword();
   const { lockIfUnauthorized } = useAdminAuth();
   const items = draft.tempImages;
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const nextIdRef = useRef(1);
   const itemsRef = useRef(items);
 
@@ -35,6 +36,7 @@ export function useTempImages() {
 
     async function loadFromTemp() {
       setIsLoading(true);
+      setLoadError(null);
       try {
         const tempItems = await listTempImages(password);
         if (!active) return;
@@ -53,7 +55,8 @@ export function useTempImages() {
         nextIdRef.current = mapped.length + 1;
       } catch (error: unknown) {
         if (!active) return;
-        lockIfUnauthorized(error);
+        if (lockIfUnauthorized(error)) return;
+        setLoadError(describeError(t, error));
         updateTempImages(() => []);
       } finally {
         if (active) {
@@ -67,7 +70,7 @@ export function useTempImages() {
     return () => {
       active = false;
     };
-  }, [updateTempImages, tempReloadToken, password, lockIfUnauthorized]);
+  }, [updateTempImages, tempReloadToken, password, lockIfUnauthorized, t]);
 
   const patchItem = useCallback((id: number, patch: Partial<TempImageItem>) => {
     updateTempImages((prev) => prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
@@ -79,6 +82,10 @@ export function useTempImages() {
   }, [lockIfUnauthorized, patchItem, t]);
 
   function addItem() {
+    if (isLoading) {
+      return;
+    }
+
     const id = nextIdRef.current;
     nextIdRef.current += 1;
 
@@ -99,7 +106,7 @@ export function useTempImages() {
   async function removeItem(id: number) {
     const item = itemsRef.current.find((entry) => entry.id === id);
 
-    if (!item) {
+    if (!item || item.isBusy) {
       return;
     }
 
@@ -118,18 +125,21 @@ export function useTempImages() {
   }
 
   async function pickFile(id: number, file: File | null) {
-    if (!file) {
+    const target = itemsRef.current.find((entry) => entry.id === id);
+
+    if (!file || !target || target.isBusy) {
       return;
     }
 
+    let removedPrevious = false;
     patchItem(id, { isBusy: true, error: null });
 
     try {
-      const target = itemsRef.current.find((entry) => entry.id === id);
-      const desiredName = target?.pendingName || stripExtension(file.name);
+      const desiredName = target.pendingName || stripExtension(file.name);
 
-      if (target?.storagePath) {
+      if (target.storagePath) {
         await deleteTempImage(password, target.storagePath);
+        removedPrevious = true;
       }
 
       const uploaded = await uploadTempImage(password, file, desiredName);
@@ -143,6 +153,11 @@ export function useTempImages() {
         error: null
       });
     } catch (error: unknown) {
+      if (removedPrevious) {
+        // The old file is already gone from temp storage: do not keep pointing at it.
+        patchItem(id, { name: "", storagePath: null, publicUrl: null });
+      }
+
       failItem(id, error);
     }
   }
@@ -154,7 +169,7 @@ export function useTempImages() {
   async function confirmName(id: number) {
     const item = itemsRef.current.find((entry) => entry.id === id);
 
-    if (!item || !item.storagePath || !item.pendingName.trim() || item.pendingName === item.name) {
+    if (!item || item.isBusy || !item.storagePath || !item.pendingName.trim() || item.pendingName === item.name) {
       return;
     }
 
@@ -176,5 +191,5 @@ export function useTempImages() {
     }
   }
 
-  return { items, isLoading, addItem, removeItem, pickFile, changeName, confirmName };
+  return { items, isLoading, loadError, addItem, removeItem, pickFile, changeName, confirmName };
 }
