@@ -80,6 +80,9 @@ export function validateImageFile(file: File) {
 type UploadOptions = {
 	upsert?: boolean
 	mapErrors?: boolean
+	// Receives every path right after it is uploaded, so callers can clean up
+	// partial uploads when a later file fails.
+	onUploaded?: (path: string) => void
 }
 
 export async function uploadFile(
@@ -87,7 +90,7 @@ export async function uploadFile(
 	file: File,
 	options: UploadOptions = {}
 ) {
-	const { upsert = false, mapErrors = true } = options
+	const { upsert = false, mapErrors = true, onUploaded } = options
 
 	const { error } = await supabase
 		.storage
@@ -109,6 +112,8 @@ export async function uploadFile(
 
 		throw error
 	}
+
+	onUploaded?.(path)
 }
 
 export async function deleteFiles(paths: string[]) {
@@ -204,17 +209,15 @@ export function replaceImagePaths(
 	markdown: string,
 	paths: Record<string, string>
 ) {
-	let result = markdown
+	// Single pass with a replacer function: replaced paths are never rescanned
+	// and "$" in a file name is not treated as a replacement pattern.
+	const names = Object.keys(paths)
 
-	for (const [name, path] of Object.entries(paths)) {
+	if (names.length === 0) return markdown
 
-		const safeName = escapeRegExp(name)
-		const regex = new RegExp(`\\(${safeName}\\)`, "g")
+	const regex = new RegExp(`\((${names.map(escapeRegExp).join("|")})\)`, "g")
 
-		result = result.replace(regex, `(${path})`)
-	}
-
-	return result
+	return markdown.replace(regex, (_match, name: string) => `(${paths[name]})`)
 }
 
 export async function insertPostWithRetry(postData: any, retries = 3) {

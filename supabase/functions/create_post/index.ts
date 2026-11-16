@@ -94,13 +94,13 @@ Deno.serve(async (req) => {
       return errorResponse(ERROR_MESSAGES.INVALID_TITLE, 400, jsonHeaders)
     }
 
-    const bannerPath = await uploadBanner(postId, banner)
+    const bannerPath = await uploadBanner(postId, banner, { onUploaded: path => uploadedPaths.push(path) })
 
-    uploadedPaths.push(bannerPath)
 
-    const contentPaths = await uploadContentImages(postId, imageFiles)
+    const contentPaths = await uploadContentImages(postId, imageFiles, {
+      onUploaded: path => uploadedPaths.push(path)
+    })
 
-    uploadedPaths.push(...Object.values(contentPaths))
 
     const finalMarkdown = replaceImagePaths(
       contentMarkdown,

@@ -118,16 +118,15 @@ Deno.serve(async (req) => {
     if (banner instanceof File) {
       bannerPath = await uploadBanner(id, banner, {
         upsert: true,
-        mapErrors: false
+        mapErrors: false,
+        onUploaded: path => uploadedPaths.push(path)
       })
-      uploadedPaths.push(bannerPath)
     }
 
     const contentPaths = await uploadContentImages(id, imageFiles, {
       upsert: true,
       mapErrors: false
     })
-    uploadedPaths.push(...Object.values(contentPaths))
 
     const finalMarkdown = replaceImagePaths(
       contentMarkdown,
