@@ -1,3 +1,6 @@
+/*
+ * Vitest tests for client/postsClient.ts with a fake fetch.
+ */
 import { describe, expect, it } from "vitest"
 import { createPostsClient } from "../client/index.ts"
 import type { FetchLike } from "../client/index.ts"
