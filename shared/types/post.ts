@@ -11,10 +11,11 @@ export type BasePostServiceParams = {
   active: boolean
   banner: File | null
   images: PostImage[]
+  // Sent as the X-Admin-Password header, never in the body.
   password: string
 }
 
-export type BuildPostFormDataParams = BasePostServiceParams & {
+export type BuildPostFormDataParams = Omit<BasePostServiceParams, "password"> & {
   id?: string
 }
 

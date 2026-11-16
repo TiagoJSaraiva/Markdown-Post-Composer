@@ -1,10 +1,7 @@
 import { supabase } from "./supabaseClient.ts"
-import { bucket, password } from "./data.ts"
-import { ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_IMAGE_MB, MAX_IMAGE_BYTES } from "../../../shared/constants/images.ts"
+import { getConfig } from "./config.ts"
+import { ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_IMAGE_BYTES } from "../../../shared/constants/images.ts"
 
-const BUCKET = bucket
-
-export const REQUEST_PASSWORD = password
 export const LIST_LIMIT = 100
 
 export function generateUUID() {
@@ -76,7 +73,7 @@ export async function uploadFile(
 
 	const { error } = await supabase
 		.storage
-		.from(BUCKET)
+		.from(getConfig().postsBucket)
 		.upload(path, file, { upsert })
 
 	if (error) {
@@ -101,7 +98,7 @@ export async function deleteFiles(paths: string[]) {
 
 	await supabase
 		.storage
-		.from(BUCKET)
+		.from(getConfig().postsBucket)
 		.remove(paths)
 }
 
@@ -112,7 +109,7 @@ export async function listAllPostFiles(postId: string) {
 	while (true) {
 		const { data, error } = await supabase
 			.storage
-			.from(BUCKET)
+			.from(getConfig().postsBucket)
 			.list(postId, { limit: LIST_LIMIT, offset })
 
 		if (error) throw error

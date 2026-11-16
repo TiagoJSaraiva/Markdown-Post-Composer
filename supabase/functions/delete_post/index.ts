@@ -1,36 +1,34 @@
-// deno-lint-ignore-file no-explicit-any
 import "@supabase/functions-js/edge-runtime.d.ts"
 import type { DeletePostRequestBody } from "@shared/contracts/deletePost.ts"
 import { supabase } from "../_lib/supabaseClient.ts"
 import {
-  REQUEST_PASSWORD,
   deleteFiles,
   listAllPostFiles
 } from "../_lib/auxiliaryFunctions.ts"
+import { checkAdminPassword } from "../_lib/auth.ts"
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../_lib/errorMessages.ts"
-import { getCorsHeaders, getJsonHeaders, isOriginAllowed } from "../_lib/cors.ts"
+import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
 
 Deno.serve(async (req) => {
 
-  const origin = req.headers.get("origin")
-  const corsHeaders = getCorsHeaders(origin)
-  const jsonHeaders = getJsonHeaders(origin)
+  const context = prepareRequest(req)
 
-  if (req.method === "OPTIONS") {
-    if (!isOriginAllowed(origin)) {
-      return new Response("Forbidden origin", { status: 403, headers: corsHeaders })
-    }
-
-    return new Response("ok", { headers: corsHeaders })
+  if (context instanceof Response) {
+    return context
   }
+
+  const { config, jsonHeaders } = context
 
   try {
 
     if (req.method !== "DELETE") {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED }),
-        { status: 405, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
+    }
+
+    const passwordError = await checkAdminPassword(req, config, jsonHeaders)
+
+    if (passwordError) {
+      return passwordError
     }
 
     let body: DeletePostRequestBody | null
@@ -38,33 +36,13 @@ Deno.serve(async (req) => {
     try {
       body = await req.json()
     } catch {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.INVALID_JSON }),
-        { status: 400, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.INVALID_JSON, 400, jsonHeaders)
     }
 
-    const { id, password: requestPassword } = body ?? {}
+    const id = body?.id
 
     if (!id || typeof id !== "string") {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.INVALID_ID }),
-        { status: 400, headers: jsonHeaders }
-      )
-    }
-
-    if (!requestPassword || typeof requestPassword !== "string") {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.INVALID_PASSWORD }),
-        { status: 401, headers: jsonHeaders }
-      )
-    }
-
-    if (requestPassword !== REQUEST_PASSWORD) {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.WRONG_PASSWORD }),
-        { status: 401, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.INVALID_ID, 400, jsonHeaders)
     }
 
     const { data: post, error: fetchError } = await supabase
@@ -74,10 +52,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (fetchError || !post) {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.POST_NOT_FOUND }),
-        { status: 404, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.POST_NOT_FOUND, 404, jsonHeaders)
     }
 
     const files = await listAllPostFiles(id)
@@ -105,13 +80,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: jsonHeaders }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
 
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: jsonHeaders }
-    )
+    return internalErrorResponse(err, jsonHeaders)
 
   }
 })
-

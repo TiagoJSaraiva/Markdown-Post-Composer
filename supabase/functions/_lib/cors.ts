@@ -1,45 +1,43 @@
-const ALLOWED_ORIGIN_HOSTS = new Set([
-  "admin.litaldibet.com.br",
-  "www.litaldibet.com.br"
-])
+import type { FunctionConfig } from "./config.ts"
 
-function resolveAllowedOrigin(origin: string | null): string | null {
+export function resolveAllowedOrigin(origin: string | null, allowedOrigins: string[]): string | null {
   if (!origin) {
     return null
   }
 
   try {
-    const parsed = new URL(origin)
-    const host = parsed.host.toLowerCase()
+    const normalized = new URL(origin).origin
 
-    if (parsed.protocol === "https:" && ALLOWED_ORIGIN_HOSTS.has(host)) { 
-      return `${parsed.protocol}//${parsed.host}`
-    }
+    return allowedOrigins.includes(normalized) ? normalized : null
   } catch {
     return null
   }
-
-  return null
 }
 
-export function isOriginAllowed(origin: string | null): boolean {
-  return resolveAllowedOrigin(origin) !== null
+// Requests without an Origin header (server-to-server, scripts) are allowed.
+// A present Origin must exactly match one of the configured origins.
+export function isOriginAllowed(origin: string | null, config: FunctionConfig): boolean {
+  if (origin === null) {
+    return true
+  }
+
+  return resolveAllowedOrigin(origin, config.allowedOrigins) !== null
 }
 
-export function getCorsHeaders(origin: string | null): HeadersInit {
-  const allowedOrigin = resolveAllowedOrigin(origin)
+export function getCorsHeaders(origin: string | null, config: FunctionConfig): Record<string, string> {
+  const allowedOrigin = resolveAllowedOrigin(origin, config.allowedOrigins)
 
   return {
     ...(allowedOrigin ? { "Access-Control-Allow-Origin": allowedOrigin } : {}),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-password",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Vary": "Origin"
   }
 }
 
-export function getJsonHeaders(origin: string | null): HeadersInit {
+export function getJsonHeaders(origin: string | null, config: FunctionConfig): Record<string, string> {
   return {
-    ...getCorsHeaders(origin),
+    ...getCorsHeaders(origin, config),
     "Content-Type": "application/json"
   }
 }

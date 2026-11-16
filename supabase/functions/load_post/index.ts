@@ -1,44 +1,32 @@
-// deno-lint-ignore-file no-explicit-any
-
 import "@supabase/functions-js/edge-runtime.d.ts"
 
 import type { LoadPostSuccessResponse, PostDetails } from "@shared/contracts/loadPost.ts"
-import { POST_IMAGES_BUCKET } from "@shared/constants/storage.ts"
-import { getCorsHeaders, getJsonHeaders, isOriginAllowed } from "../_lib/cors.ts"
+import { getConfig } from "../_lib/config.ts"
 import { ERROR_MESSAGES } from "../_lib/errorMessages.ts"
+import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
 import { supabase } from "../_lib/supabaseClient.ts"
 
 Deno.serve(async (req) => {
 
-  const origin = req.headers.get("origin")
-  const corsHeaders = getCorsHeaders(origin)
-  const jsonHeaders = getJsonHeaders(origin)
+  const context = prepareRequest(req)
 
-  if (req.method === "OPTIONS") {
-    if (!isOriginAllowed(origin)) {
-      return new Response("Forbidden origin", { status: 403, headers: corsHeaders })
-    }
-
-    return new Response("ok", { headers: corsHeaders })
+  if (context instanceof Response) {
+    return context
   }
+
+  const { jsonHeaders } = context
 
   try {
 
     if (req.method !== "GET") {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED }),
-        { status: 405, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
     }
 
     const url = new URL(req.url)
     const id = url.searchParams.get("id")
 
     if (!id) {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.INVALID_ID }),
-        { status: 400, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.INVALID_ID, 400, jsonHeaders)
     }
 
     const { data: post, error: postError } = await supabase
@@ -48,10 +36,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (postError || !post) {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.POST_NOT_FOUND }),
-        { status: 404, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.POST_NOT_FOUND, 404, jsonHeaders)
     }
 
     const bannerUrl = buildPublicUrl(post.banner_path)
@@ -83,12 +68,9 @@ Deno.serve(async (req) => {
       }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
 
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: jsonHeaders }
-    )
+    return internalErrorResponse(err, jsonHeaders)
 
   }
 })
@@ -96,7 +78,7 @@ Deno.serve(async (req) => {
 function buildPublicUrl(path: string) {
   const { data } = supabase
     .storage
-    .from(POST_IMAGES_BUCKET)
+    .from(getConfig().postsBucket)
     .getPublicUrl(path)
 
   return data.publicUrl
@@ -105,7 +87,7 @@ function buildPublicUrl(path: string) {
 async function listPostImagePaths(postId: string, bannerPath: string): Promise<string[]> {
   const { data, error } = await supabase
     .storage
-    .from(POST_IMAGES_BUCKET)
+    .from(getConfig().postsBucket)
     .list(postId, { limit: 500, offset: 0 })
 
   if (error) {
