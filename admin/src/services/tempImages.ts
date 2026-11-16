@@ -1,3 +1,7 @@
+/*
+ * Client of the temp_images Edge Function: the staging area where images live while
+ * a post is being composed. Failures throw ApiError. Used by the form and editor hooks.
+ */
 import { functionUrl } from "../lib/edgeFunctionsPaths";
 import { ApiError, parseErrorBody } from "../lib/apiError";
 import { buildAdminHeaders } from "@mdpc/shared/services/requestHelpers.ts";
@@ -9,12 +13,17 @@ import {
 } from "@mdpc/shared/contracts/tempImages.ts";
 import { getStorageFileName, splitFileName } from "@mdpc/shared/domain/tempImageNaming.ts";
 
+/** A staged image as the admin uses it. */
 export type TempStorageImage = {
+  /** Display name (no version suffix, no extension). */
   name: string;
+  /** Object path in the temp bucket. */
   storagePath: string;
+  /** Public URL, with the cache-busting version parameter. */
   publicUrl: string;
 };
 
+/** Parameters of one temp_images request. */
 type CallOptions = {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   query?: string;
@@ -66,11 +75,27 @@ async function call(
   return (body as { data: unknown }).data;
 }
 
+/**
+ * Lists the staged images.
+ *
+ * @param password - Admin password.
+ * @returns The images in temp storage.
+ * @throws ApiError on any failure.
+ */
 export async function listTempImages(password: string): Promise<TempStorageImage[]> {
   const data = await call(password, isListTempImagesSuccessResponse, { method: "GET" });
   return (data as TempImage[]).map(toStorageImage);
 }
 
+/**
+ * Stages a new image.
+ *
+ * @param password - Admin password.
+ * @param file - Image file.
+ * @param desiredName - Wanted display name; the backend picks one when empty.
+ * @returns The staged image.
+ * @throws ApiError on any failure.
+ */
 export async function uploadTempImage(password: string, file: File, desiredName: string): Promise<TempStorageImage> {
   const form = new FormData();
   form.append("file", file, file.name);
@@ -83,6 +108,15 @@ export async function uploadTempImage(password: string, file: File, desiredName:
   return toStorageImage(data as TempImage);
 }
 
+/**
+ * Renames a staged image.
+ *
+ * @param password - Admin password.
+ * @param currentPath - Current object path.
+ * @param nextName - New display name.
+ * @returns The renamed image (its path changes).
+ * @throws ApiError on any failure.
+ */
 export async function renameTempImage(password: string, currentPath: string, nextName: string): Promise<TempStorageImage> {
   const data = await call(password, isTempImageSuccessResponse, {
     method: "PATCH",
@@ -91,6 +125,13 @@ export async function renameTempImage(password: string, currentPath: string, nex
   return toStorageImage(data as TempImage);
 }
 
+/**
+ * Deletes one staged image.
+ *
+ * @param password - Admin password.
+ * @param path - Object path; nothing happens when empty.
+ * @throws ApiError on any failure.
+ */
 export async function deleteTempImage(password: string, path: string): Promise<void> {
   if (!path) {
     return;
@@ -99,7 +140,13 @@ export async function deleteTempImage(password: string, path: string): Promise<v
   await call(password, isDeleteTempImagesSuccessResponse, { method: "DELETE", json: { path } });
 }
 
-/** `keepalive` lets the request outlive the page (used on pagehide). */
+/**
+ * Deletes every staged image. `keepalive` lets the request outlive the page (used on pagehide).
+ *
+ * @param password - Admin password.
+ * @param options - `keepalive` keeps the request alive while the page unloads.
+ * @throws ApiError on any failure.
+ */
 export async function clearTempImages(password: string, options: { keepalive?: boolean } = {}): Promise<void> {
   await call(password, isDeleteTempImagesSuccessResponse, {
     method: "DELETE",
@@ -108,7 +155,14 @@ export async function clearTempImages(password: string, options: { keepalive?: b
   });
 }
 
-/** Copies a published post image into temp (server side). */
+/**
+ * Copies a published post image into temp (server side), so it can be edited.
+ *
+ * @param password - Admin password.
+ * @param postImagePath - Object path in the posts bucket.
+ * @returns The staged copy.
+ * @throws ApiError on any failure.
+ */
 export async function importPostImageToTemp(password: string, postImagePath: string): Promise<TempStorageImage> {
   const data = await call(password, isTempImageSuccessResponse, {
     method: "POST",
@@ -118,6 +172,14 @@ export async function importPostImageToTemp(password: string, postImagePath: str
   return toStorageImage(data as TempImage);
 }
 
+/**
+ * Downloads a staged image as a File, ready to be sent with the post.
+ *
+ * @param publicUrl - Public URL of the staged image.
+ * @param desiredBaseName - File name without extension; the extension of the URL is kept.
+ * @returns The file.
+ * @throws ApiError on network failure or a non-OK response.
+ */
 export async function downloadTempImageAsFile(publicUrl: string, desiredBaseName: string): Promise<File> {
   let response: Response;
 

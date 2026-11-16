@@ -1,3 +1,7 @@
+/*
+ * Hook with the edit-from-dropdown flow: loads a published post into the draft.
+ * Used by PostPreviewPanel.
+ */
 import { useState } from "react";
 import type { PostDetails } from "@mdpc/shared/contracts/loadPost.ts";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
@@ -13,6 +17,11 @@ import type { DropdownPost } from "./usePostList";
 /**
  * Edit-from-dropdown flow: confirms, discards the current temp images, loads the
  * post, imports its images to temp and fills the draft with local image names.
+ *
+ * @param posts - Posts of the dropdown, used to find the one requested.
+ * @param onPrepared - Called after the draft was filled, e.g. to close the dropdown.
+ * @returns `target` (post awaiting confirmation), `isPreparing`, `errorMessage`, and the actions
+ * `request` (ask to edit a post id), `cancel` and `confirm` (load the post into the draft).
  */
 export function useEditPost(posts: DropdownPost[], onPrepared: () => void) {
   const { setPreviewMarkdown, setDraftValues, startEditSession, requestTempReload } = usePostDraft();

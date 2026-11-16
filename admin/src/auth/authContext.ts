@@ -1,7 +1,13 @@
+/*
+ * Context, value type and consumer hooks of the in-memory admin password session.
+ * AuthProvider supplies the value; panels and hooks read the password from here.
+ */
 import { createContext, useContext } from "react";
 
+/** Outcome of an unlock attempt; `error` is the thrown value (an ApiError for backend failures). */
 export type UnlockResult = { ok: true } | { ok: false; error: unknown };
 
+/** State and actions of the admin password session. */
 export type AuthContextValue = {
   /** The admin password, held in memory only. Null while locked. */
   password: string | null;
@@ -18,8 +24,15 @@ export type AuthContextValue = {
   lockIfUnauthorized: (statusOrError: unknown) => boolean;
 };
 
+/** Context of the password session; `null` outside AuthProvider. */
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Reads the password session.
+ *
+ * @returns The session state and its actions.
+ * @throws Error when used outside AuthProvider.
+ */
 export function useAdminAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 
@@ -30,7 +43,12 @@ export function useAdminAuth(): AuthContextValue {
   return context;
 }
 
-/** The password of the unlocked session. Only call from components rendered behind the gate. */
+/**
+ * Reads the password of the unlocked session. Only call from components rendered behind the gate.
+ *
+ * @returns The admin password.
+ * @throws Error when the app is locked.
+ */
 export function useAdminPassword(): string {
   const { password } = useAdminAuth();
 

@@ -1,3 +1,7 @@
+/*
+ * Right panel: rendered markdown preview, or the published posts dropdown with the edit
+ * and delete flows. Composed by App.
+ */
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { MarkdownRenderer } from "@mdpc/shared/react";
@@ -12,6 +16,11 @@ import { useEditPost } from "./useEditPost";
 import { usePostList } from "./usePostList";
 import "./PostPreviewPanel.css";
 
+/**
+ * Preview of the draft and management of published posts.
+ *
+ * @returns The preview panel.
+ */
 export default function PostPreviewPanel() {
   const { previewMarkdown, editSession } = usePostDraft();
   const { t } = useI18n();

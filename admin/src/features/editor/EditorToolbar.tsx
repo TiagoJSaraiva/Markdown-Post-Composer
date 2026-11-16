@@ -1,18 +1,37 @@
+/*
+ * Button row under the editor (save, cancel edit, preview, help, clear, website, lock).
+ * Purely presentational; EditorPanel wires the actions.
+ */
 import { Globe, Lock } from "lucide-react";
 import broomIcon from "../../assets/img/broom.png";
 import { useI18n } from "../../i18n";
 
+/** Props of EditorToolbar. */
 type EditorToolbarProps = {
+  /** Shows the cancel-edit button while an existing post is being edited. */
   isEditing: boolean;
+  /** Public website URL; the website button is hidden when empty. */
   siteUrl: string;
+  /** Starts the save flow. */
   onSave: () => void;
+  /** Abandons the current edit session. */
   onCancelEdit: () => void;
+  /** Renders the markdown in the preview panel. */
   onPreview: () => void;
+  /** Inserts the markdown tutorial. */
   onHelp: () => void;
+  /** Empties the form. */
   onClear: () => void;
+  /** Forgets the password and shows the unlock screen. */
   onLock: () => void;
 };
 
+/**
+ * Toolbar of the editor panel.
+ *
+ * @param props - Component props.
+ * @returns The button row.
+ */
 export default function EditorToolbar({
   isEditing,
   siteUrl,

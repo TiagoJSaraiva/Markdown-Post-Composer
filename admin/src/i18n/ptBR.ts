@@ -1,5 +1,9 @@
+/*
+ * Brazilian Portuguese dictionary. Values are user-facing text; the keys must match en.ts.
+ */
 import type { MessageKey } from "./en";
 
+/** Portuguese (Brazil) messages, typed so a missing or extra key fails the build. */
 export const ptBR: Record<MessageKey, string> = {
   // Configuration error screen
   "config.title": "Erro de configuração",

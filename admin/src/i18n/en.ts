@@ -1,5 +1,8 @@
-// Source dictionary: every key must also exist in the other dictionaries.
-// Placeholders use {name}.
+/*
+ * English message dictionary, the source of truth for the message keys.
+ * ptBR.ts must define the same keys; index.ts picks the dictionary.
+ */
+/** English messages; `{name}` placeholders are filled by `t`. */
 export const en = {
   // Configuration error screen
   "config.title": "Configuration error",
@@ -175,4 +178,5 @@ To learn more about markdown, click [here](https://www.markdownguide.org/basic-s
   "error.generic": "Unexpected error."
 } as const;
 
+/** Every key a message can be requested with. */
 export type MessageKey = keyof typeof en;

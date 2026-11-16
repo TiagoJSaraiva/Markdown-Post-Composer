@@ -1,3 +1,7 @@
+/*
+ * Hook that keeps the draft's image slots in sync with the backend temp storage
+ * (load, add, upload, rename, remove). Used by FormPanel.
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePostDraft, type TempImageItem } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
@@ -15,6 +19,10 @@ import { stripExtension } from "../../utils/fileNames";
  * State and actions of the temp image list. The list itself lives in the post
  * draft (the editor needs it to validate, preview and save); this hook keeps it
  * in sync with the temp storage of the backend.
+ *
+ * @returns `items` (the slots), `isLoading`, `loadError` and the actions `addItem` (empty slot),
+ * `removeItem` (deletes the stored file too), `pickFile` (uploads, replacing any previous file),
+ * `changeName` (edits the pending name) and `confirmName` (renames in storage).
  */
 export function useTempImages() {
   const { draft, tempReloadToken, updateTempImages } = usePostDraft();

@@ -1,3 +1,6 @@
+/*
+ * Hook that loads the published post cards for the dropdown. Used by PostPreviewPanel.
+ */
 import { useEffect, useState } from "react";
 import type { PostCard } from "@mdpc/shared/contracts/loadCards.ts";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
@@ -6,10 +9,13 @@ import { useI18n } from "../../i18n";
 import { describeClientFailure } from "../../i18n/errors";
 import loadCardsService from "../../services/loadCards";
 
+/** A post as the dropdown shows it (subset of PostCard in camelCase). */
 export type DropdownPost = {
   id: string;
   title: string;
+  /** Public URL of the card image. */
   bannerUrl: string;
+  /** Whether the post is published (visible to readers). */
   active: boolean;
   preview?: string;
   postType?: string;
@@ -26,7 +32,13 @@ function mapCardsToDropdownPosts(cards: PostCard[]): DropdownPost[] {
   }));
 }
 
-/** Loads the post cards (including inactive ones) when the dropdown opens and the list is stale. */
+/**
+ * Loads the post cards (including inactive ones) when the dropdown opens and the list is stale.
+ *
+ * @param isOpen - Whether the dropdown is open; nothing is fetched while closed.
+ * @returns `posts`, `isLoading`, `error` (translated message or `null`) and `removePost` (drops a
+ * post from the local list after a delete).
+ */
 export function usePostList(isOpen: boolean) {
   const { t } = useI18n();
   const { postListVersion } = usePostDraft();

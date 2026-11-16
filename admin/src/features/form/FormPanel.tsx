@@ -1,3 +1,7 @@
+/*
+ * Middle panel: image slots, category, title, card image, excerpt and active flag.
+ * Composed by App; state comes from the post draft context and useTempImages.
+ */
 import { useEffect, useRef } from "react";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import InputLabel from "../../components/InputLabel";
@@ -8,6 +12,11 @@ import ImageListItem from "./ImageListItem";
 import { useTempImages } from "./useTempImages";
 import "./FormPanel.css";
 
+/**
+ * Form with the post metadata and the list of temp images.
+ *
+ * @returns The form panel.
+ */
 export default function FormPanel() {
   const { draft, setCategory, setTitle, setPreview, setActive, setBanner } = usePostDraft();
   const { t } = useI18n();

@@ -1,16 +1,32 @@
+/*
+ * One row of the post dropdown: banner, title, status and the edit and delete buttons.
+ */
 import { useI18n } from "../../i18n";
 import "./PostDropdownItem.css";
 
+/** Props of PostDropdownItem. */
 type PostDropdownItemProps = {
+  /** Post id, passed back to the callbacks. */
   id: string;
   title: string;
+  /** Public URL of the card image; nothing is shown when empty. */
   bannerUrl: string;
+  /** Whether the post is published (visible to readers). */
   isActive: boolean;
+  /** Disables both buttons. */
   isActionsDisabled?: boolean;
+  /** Delete requested. */
   onDelete: (id: string) => void;
+  /** Edit requested. */
   onEdit: (id: string) => void;
 };
 
+/**
+ * A row of the post dropdown.
+ *
+ * @param props - Component props.
+ * @returns The row.
+ */
 export default function PostDropdownItem({
   id,
   title,

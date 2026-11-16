@@ -1,15 +1,31 @@
+/*
+ * Modal of the delete flow (confirm, deleting, result). Rendered by PostPreviewPanel from
+ * the state returned by useDeletePost.
+ */
 import AppModal from "../../components/AppModal";
 import { useI18n } from "../../i18n";
 import type { DeleteModalState, DeleteResult } from "./useDeletePost";
 
+/** Props of DeletePostModal. */
 type DeletePostModalProps = {
+  /** Step of the flow to show; nothing is rendered when closed. */
   state: DeleteModalState;
+  /** Outcome shown in the `result` step. */
   result: DeleteResult | null;
+  /** Closes the confirmation. */
   onCancel: () => void;
+  /** Deletes the post. */
   onConfirm: () => void;
+  /** Closes the result. */
   onAcknowledge: () => void;
 };
 
+/**
+ * Modal for the current step of the delete flow.
+ *
+ * @param props - Component props.
+ * @returns The modal, or `null` while the flow is closed.
+ */
 export default function DeletePostModal({ state, result, onCancel, onConfirm, onAcknowledge }: DeletePostModalProps) {
   const { t } = useI18n();
 
