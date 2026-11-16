@@ -1,3 +1,7 @@
+/*
+ * Deno tests for createHandler in _lib/http.ts (origin, preflight, method,
+ * password and error handling).
+ */
 import { assertEquals } from "@std/assert"
 
 // Config is memoized per module instance; set the environment before the

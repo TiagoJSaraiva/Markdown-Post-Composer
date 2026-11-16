@@ -1,3 +1,6 @@
+/*
+ * Deno tests for the error classifiers of _lib/postsRepository.ts.
+ */
 import { assertEquals } from "@std/assert"
 import type { AppError } from "../_lib/errors.ts"
 import { isTransientError, isUniqueViolation, mapPostWriteError } from "../_lib/postsRepository.ts"

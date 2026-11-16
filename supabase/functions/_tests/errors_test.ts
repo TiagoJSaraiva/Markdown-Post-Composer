@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/errors.ts and the error mapping in _lib/http.ts.
+ */
 import { assertEquals, assertNotMatch } from "@std/assert"
 import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
 import { ConfigError } from "../_lib/config.ts"

@@ -1,3 +1,6 @@
+/*
+ * Deno tests for _lib/slug.ts.
+ */
 import { assertEquals, assertThrows } from "@std/assert"
 import { AppError } from "../_lib/errors.ts"
 import { requireSlug, slugify } from "../_lib/slug.ts"
