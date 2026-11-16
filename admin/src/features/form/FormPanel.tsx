@@ -54,10 +54,10 @@ export default function FormPanel() {
       </section>
 
       <section className="form-panel-bottom">
-        <InputLabel value={t("form.type")} />
+        <InputLabel value={t("form.type")} htmlFor="post-category" />
         <select
           name="type"
-          id="type"
+          id="post-category"
           multiple={false}
           className="form-panel-select"
           value={draft.category}
@@ -68,16 +68,18 @@ export default function FormPanel() {
           ))}
         </select>
 
-        <InputLabel value={t("form.title")} />
+        <InputLabel value={t("form.title")} htmlFor="post-title" />
         <input
+          id="post-title"
           type="text"
           className="form-panel-input-text"
           value={draft.title}
           onChange={(event) => setTitle(event.target.value)}
         />
 
-        <InputLabel value={t("form.cardImage")} />
+        <InputLabel value={t("form.cardImage")} htmlFor="post-banner" />
         <input
+          id="post-banner"
           ref={bannerInputRef}
           type="file"
           className="form-panel-input-file"
@@ -85,8 +87,9 @@ export default function FormPanel() {
           onChange={(event) => setBanner(event.target.files?.[0] ?? null)}
         />
 
-        <InputLabel value={t("form.excerpt")} />
+        <InputLabel value={t("form.excerpt")} htmlFor="post-excerpt" />
         <textarea
+          id="post-excerpt"
           className="form-panel-preview"
           value={draft.preview}
           onChange={(event) => setPreview(event.target.value)}

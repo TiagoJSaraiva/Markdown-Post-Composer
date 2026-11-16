@@ -50,7 +50,7 @@ export default function EditorToolbar({
           aria-label={t("editor.clear")}
           onClick={onClear}
         >
-          <img src={broomIcon} alt={t("editor.clear")} className="editor-panel-icon-image" />
+          <img src={broomIcon} alt="" className="editor-panel-icon-image" />
         </button>
         {siteUrl ? (
           <button

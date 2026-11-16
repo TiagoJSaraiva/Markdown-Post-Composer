@@ -23,6 +23,7 @@ export const en = {
   "editor.cancel": "Cancel",
   "editor.preview": "Preview",
   "editor.markdownHelp": "Markdown help",
+  "editor.markdownLabel": "Post markdown",
   "editor.clear": "Clear",
   "editor.website": "Website",
   "editor.lock": "Lock",
@@ -112,6 +113,7 @@ To learn more about markdown, click [here](https://www.markdownguide.org/basic-s
   "image.choose": "Choose image",
   "image.namePlaceholder": "Name",
   "image.confirmName": "Confirm name",
+  "image.remove": "Remove image",
 
   // Post list and preview panel
   "post.delete": "delete",

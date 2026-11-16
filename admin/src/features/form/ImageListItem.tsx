@@ -46,6 +46,7 @@ export default function ImageListItem({
               type="text"
               className="image-list-item-name-input"
               placeholder={t("image.namePlaceholder")}
+              aria-label={t("image.namePlaceholder")}
               value={displayName}
               disabled={isBusy}
               onChange={(event) => onChangeName(id, event.target.value)}
@@ -73,6 +74,7 @@ export default function ImageListItem({
           className="image-list-item-delete-button"
           onClick={() => onRemove(id)}
           disabled={isBusy}
+          aria-label={t("image.remove")}
         >
           X
         </button>

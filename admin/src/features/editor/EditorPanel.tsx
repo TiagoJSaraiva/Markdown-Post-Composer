@@ -38,6 +38,7 @@ export default function EditorPanel() {
 
       <textarea
         className="editor-panel-area"
+        aria-label={t("editor.markdownLabel")}
         value={draft.content_markdown}
         onChange={(event) => setContentMarkdown(event.target.value)}
       ></textarea>

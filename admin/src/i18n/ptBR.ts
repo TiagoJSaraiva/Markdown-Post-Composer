@@ -23,6 +23,7 @@ export const ptBR: Record<MessageKey, string> = {
   "editor.cancel": "Cancelar",
   "editor.preview": "Preview",
   "editor.markdownHelp": "Ajuda markdown",
+  "editor.markdownLabel": "Markdown do post",
   "editor.clear": "Limpar",
   "editor.website": "Website",
   "editor.lock": "Bloquear",
@@ -112,6 +113,7 @@ Para saber  mais de markdown, clique [aqui](https://www.markdownguide.org/basic-
   "image.choose": "Escolher imagem",
   "image.namePlaceholder": "Nome",
   "image.confirmName": "Confirmar nome",
+  "image.remove": "Remover imagem",
 
   // Post list and preview panel
   "post.delete": "apagar",
