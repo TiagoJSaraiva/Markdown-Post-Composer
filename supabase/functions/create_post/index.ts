@@ -1,159 +1,44 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
-import { normalizePostCategory } from "@shared/domain/postCategory.ts"
-import {
-  deleteFiles,
-  generateUUID,
-  insertPostWithRetry,
-  replaceImagePaths,
-  slugify,
-  uploadBanner,
-  uploadContentImages
-} from "../_lib/auxiliaryFunctions.ts"
-import { checkAdminPassword } from "../_lib/auth.ts"
-import {
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-  knownErrorResponse
-} from "../_lib/errorMessages.ts"
-import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
+import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"
+import { createHandler, jsonResponse, readFormData } from "../_lib/http.ts"
+import { replaceImagePaths } from "../_lib/images.ts"
+import { parseCreatePostForm } from "../_lib/postForm.ts"
+import { uploadBanner, uploadContentImages } from "../_lib/postImages.ts"
+import { insertPost } from "../_lib/postsRepository.ts"
+import { requireSlug } from "../_lib/slug.ts"
+import { removeFilesQuietly } from "../_lib/storage.ts"
 
-Deno.serve(async (req) => {
-
-  const context = prepareRequest(req)
-
-  if (context instanceof Response) {
-    return context
-  }
-
-  const { config, jsonHeaders } = context
-
+Deno.serve(createHandler({ methods: ["POST"], requireAdmin: true }, async ({ req, config, jsonHeaders }) => {
+  const form = parseCreatePostForm(await readFormData(req), config.categories)
+  const slug = requireSlug(form.title)
+  const postId = crypto.randomUUID()
+  const bucket = config.postsBucket
   const uploadedPaths: string[] = []
 
   try {
+    const upload = { onUploaded: (path: string) => uploadedPaths.push(path) }
 
-    if (req.method !== "POST") {
-      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
-    }
+    const bannerPath = await uploadBanner(bucket, postId, form.banner, upload)
+    const contentPaths = await uploadContentImages(bucket, postId, form.images, upload)
 
-    const passwordError = await checkAdminPassword(req, config, jsonHeaders)
-
-    if (passwordError) {
-      return passwordError
-    }
-
-    let form: FormData
-
-    try {
-      form = await req.formData()
-    } catch {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const category = form.get("category")
-    const title = form.get("title")
-    const preview = form.get("preview")
-    const contentMarkdown = form.get("content_markdown")
-    const active = form.get("active")
-
-    const banner = form.get("banner")
-    const images = form.getAll("images")
-
-    const imageFiles = images.filter(
-      (image): image is File => image instanceof File
-    )
-
-    if (
-      typeof category !== "string" ||
-      typeof title !== "string" ||
-      typeof preview !== "string" ||
-      typeof contentMarkdown !== "string" ||
-      typeof active !== "string" ||
-      !(banner instanceof File) ||
-      imageFiles.length !== images.length
-    ) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const normalizedCategory = normalizePostCategory(category, config.categories)
-
-    if (!normalizedCategory) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const parsedActive = parseActiveValue(active)
-
-    if (parsedActive === null) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const postId = generateUUID()
-
-    const slug = slugify(title)
-
-    if (!slug) {
-      return errorResponse(ERROR_MESSAGES.INVALID_TITLE, 400, jsonHeaders)
-    }
-
-    const bannerPath = await uploadBanner(postId, banner)
-
-    uploadedPaths.push(bannerPath)
-
-    const contentPaths = await uploadContentImages(postId, imageFiles)
-
-    uploadedPaths.push(...Object.values(contentPaths))
-
-    const finalMarkdown = replaceImagePaths(
-      contentMarkdown,
-      contentPaths
-    )
-
-    const postData = {
+    await insertPost({
       id: postId,
-      post_type: normalizedCategory,
-      title,
+      post_type: form.category,
+      title: form.title,
       slug,
       banner_path: bannerPath,
-      preview,
-      content_markdown: finalMarkdown,
-      active: parsedActive
-    }
+      preview: form.preview,
+      content_markdown: replaceImagePaths(form.contentMarkdown, contentPaths),
+      active: form.active
+    })
 
-    const finalId = await insertPostWithRetry(postData)
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: SUCCESS_MESSAGES.POST_CREATED,
-        id: finalId
-      }),
-      {
-        status: 200,
-        headers: jsonHeaders
-      }
+    return jsonResponse(
+      { success: true, message: POST_SUCCESS_CODES.POST_CREATED, id: postId },
+      jsonHeaders
     )
+  } catch (error) {
+    await removeFilesQuietly(bucket, uploadedPaths, "create_post rollback")
 
-  } catch (err: unknown) {
-
-    try {
-      await deleteFiles(uploadedPaths)
-    } catch (cleanupError) {
-      console.error("Failed to cleanup uploaded files", cleanupError)
-    }
-
-    return knownErrorResponse(err, jsonHeaders) ?? internalErrorResponse(err, jsonHeaders)
+    throw error
   }
-})
-
-function parseActiveValue(value: string): boolean | null {
-  const normalized = value.trim().toLowerCase()
-
-  if (normalized === "true") {
-    return true
-  }
-
-  if (normalized === "false") {
-    return false
-  }
-
-  return null
-}
+}))
