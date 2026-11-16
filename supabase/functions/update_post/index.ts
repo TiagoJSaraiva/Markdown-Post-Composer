@@ -3,10 +3,12 @@ import { normalizePostCategory } from "@shared/domain/postCategory.ts"
 import { supabase } from "../_lib/supabaseClient.ts"
 import {
   deleteFiles,
+  isUniqueViolation,
   listAllPostFiles,
   replaceImagePaths,
   slugify,
   uploadBanner,
+  uniqueViolationToError,
   uploadContentImages
 } from "../_lib/auxiliaryFunctions.ts"
 import { checkAdminPassword } from "../_lib/auth.ts"
@@ -146,11 +148,8 @@ Deno.serve(async (req) => {
       .eq("id", id)
 
     if (updateError) {
-      if (
-        updateError.message.includes("posts_slug_unique") ||
-        updateError.message.includes("posts_title_unique")
-      ) {
-        throw new Error("TITLE_OR_SLUG_ALREADY_EXISTS")
+      if (isUniqueViolation(updateError)) {
+        throw uniqueViolationToError(updateError)
       }
 
       throw updateError

@@ -43,6 +43,21 @@ export function isTransientError(error: any) {
 	return false
 }
 
+// Postgres unique_violation (SQLSTATE 23505).
+export function isUniqueViolation(error: any) {
+	return String(error?.code ?? "") === "23505"
+}
+
+// The primary key means a generated UUID collided; any other unique
+// constraint (posts_slug_key, posts_title_key) means the title/slug is taken.
+export function uniqueViolationToError(error: any) {
+	const text = `${error?.message ?? ""} ${error?.details ?? ""}`
+
+	return new Error(
+		text.includes("posts_pkey") ? "UUID_COLLISION" : "TITLE_OR_SLUG_ALREADY_EXISTS"
+	)
+}
+
 export function validateImageFile(file: File) {
 	const ext = `.${file.name.split(".").pop() ?? ""}`.toLowerCase()
 
@@ -205,16 +220,8 @@ export async function insertPostWithRetry(postData: any, retries = 3) {
 
 		if (!error) return postData.id
 
-		if (error.message.includes("posts_pkey")) {
-			throw new Error("UUID_COLLISION")
-		}
-
-		if (
-			error.message.includes("posts_slug_unique") ||
-			error.message.includes("posts_title_unique")
-		) {
-
-			throw new Error("TITLE_OR_SLUG_ALREADY_EXISTS")
+		if (isUniqueViolation(error)) {
+			throw uniqueViolationToError(error)
 		}
 
 		if (isTransientError(error)) {
