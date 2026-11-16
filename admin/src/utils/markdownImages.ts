@@ -91,7 +91,7 @@ export function reverseMarkdownImagePaths(markdown: string, imagePaths: string[]
     }
 
     const regex = new RegExp(`\\(${escapeRegExp(path)}\\)`, "g");
-    result = result.replace(regex, `(${shortName})`);
+    result = result.replace(regex, () => `(${shortName})`);
   }
 
   return result;

@@ -172,13 +172,14 @@ export function buildPreviewMarkdown(
       continue;
     }
 
+    const publicUrl = item.publicUrl;
     const aliases = [item.name, item.pendingName, getFileNameFromPath(item.storagePath)]
       .map((value) => value.trim())
       .filter(Boolean);
 
     for (const alias of aliases) {
       const regex = new RegExp(`\\(${escapeRegExp(alias)}\\)`, "g");
-      result = result.replace(regex, `(${item.publicUrl})`);
+      result = result.replace(regex, () => `(${publicUrl})`);
     }
   }
 
