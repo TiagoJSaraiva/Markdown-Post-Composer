@@ -15,6 +15,7 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
   const [previewMarkdown, setPreviewMarkdown] = useState("");
   const [editSession, setEditSession] = useState<EditSession | null>(null);
   const [tempReloadToken, setTempReloadToken] = useState(0);
+  const [postListVersion, setPostListVersion] = useState(0);
 
   const setCategory = useCallback((category: string) => {
     setDraft((prev) => ({ ...prev, category }));
@@ -60,11 +61,23 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setTempReloadToken((prev) => prev + 1);
   }, []);
 
+  const notifyPostsChanged = useCallback(() => {
+    setPostListVersion((prev) => prev + 1);
+  }, []);
+
+  const resetDraft = useCallback(() => {
+    setDraft(createEmptyDraft(getConfig().defaultCategory));
+    setPreviewMarkdown("");
+    setEditSession(null);
+    setTempReloadToken((prev) => prev + 1);
+  }, []);
+
   const value = useMemo<PostDraftContextValue>(() => ({
     draft,
     previewMarkdown,
     editSession,
     tempReloadToken,
+    postListVersion,
     setCategory,
     setTitle,
     setPreview,
@@ -76,12 +89,15 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setDraftValues,
     startEditSession,
     clearEditSession,
-    requestTempReload
+    requestTempReload,
+    resetDraft,
+    notifyPostsChanged
   }), [
     draft,
     previewMarkdown,
     editSession,
     tempReloadToken,
+    postListVersion,
     setCategory,
     setTitle,
     setPreview,
@@ -93,7 +109,9 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setDraftValues,
     startEditSession,
     clearEditSession,
-    requestTempReload
+    requestTempReload,
+    resetDraft,
+    notifyPostsChanged
   ]);
 
   return (

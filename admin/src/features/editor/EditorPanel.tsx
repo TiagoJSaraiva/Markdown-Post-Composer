@@ -18,13 +18,10 @@ export default function EditorPanel() {
   const { t } = useI18n();
   const { lock } = useAdminAuth();
   const { siteUrl } = getConfig();
-  const suspendGuard = useUnsavedChangesGuard();
+  useUnsavedChangesGuard();
   const clearForm = useClearForm();
   const help = useMarkdownHelp();
-  const save = useSavePost(() => {
-    suspendGuard();
-    window.location.reload();
-  });
+  const save = useSavePost();
 
   return (
     <div className="editor-panel">

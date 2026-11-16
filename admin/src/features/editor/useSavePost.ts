@@ -6,7 +6,6 @@ import { describeError, describeServiceFailure } from "../../i18n/errors";
 import { ApiError } from "../../lib/apiError";
 import {
   clearTempImages,
-  deleteTempImage,
   downloadTempImageAsFile
 } from "../../services/tempImages";
 import updatePostService from "../../services/updatePost";
@@ -42,8 +41,8 @@ function describeIssue(t: Translate, issue: DraftIssue): string {
 }
 
 /** Save flow of the editor: validation, confirmation, upload and the resulting modal states. */
-export function useSavePost(onSaved: () => void) {
-  const { draft, editSession } = usePostDraft();
+export function useSavePost() {
+  const { draft, editSession, resetDraft, notifyPostsChanged } = usePostDraft();
   const { t } = useI18n();
   const password = useAdminPassword();
   const { lockIfUnauthorized } = useAdminAuth();
@@ -115,12 +114,10 @@ export function useSavePost(onSaved: () => void) {
       }
 
       if (response.status >= 200 && response.status < 300) {
-        const cleanupTargets = validTempImages
-          .map((item) => item.storagePath)
-          .filter((path): path is string => Boolean(path));
+        notifyPostsChanged();
 
-        await Promise.allSettled(cleanupTargets.map((path) => deleteTempImage(password, path)));
-        await clearTempImages(password);
+        // The post is saved: failing to empty the temp storage must not turn this into an error.
+        await clearTempImages(password).catch(() => undefined);
 
         setResult({
           succeeded: true,
@@ -145,8 +142,7 @@ export function useSavePost(onSaved: () => void) {
 
   function acknowledge() {
     if (result?.succeeded) {
-      onSaved();
-      return;
+      resetDraft();
     }
 
     close();

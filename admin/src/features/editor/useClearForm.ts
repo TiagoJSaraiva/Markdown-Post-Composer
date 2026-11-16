@@ -7,7 +7,7 @@ import { createEmptyDraft } from "../../utils/draft";
 
 /** Empties the form and the backend temp images; also used to leave an edit session. */
 export function useClearForm() {
-  const { setDraftValues, setPreviewMarkdown, requestTempReload } = usePostDraft();
+  const { setDraftValues, setPreviewMarkdown, requestTempReload, resetDraft } = usePostDraft();
   const password = useAdminPassword();
   const { lockIfUnauthorized } = useAdminAuth();
   const { defaultCategory } = getConfig();
@@ -32,11 +32,14 @@ export function useClearForm() {
   async function cancelEdit() {
     try {
       await clearTempImages(password);
-    } catch {
-      // Best effort: the page reloads either way.
-    } finally {
-      window.location.reload();
+    } catch (error: unknown) {
+      // Anything else is not fatal: the reset below reloads whatever is left in temp storage.
+      if (lockIfUnauthorized(error)) {
+        return;
+      }
     }
+
+    resetDraft();
   }
 
   return { isClearing, clearAll, cancelEdit };

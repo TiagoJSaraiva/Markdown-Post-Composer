@@ -13,6 +13,8 @@ export type PostDraftContextValue = {
   previewMarkdown: string;
   editSession: EditSession | null;
   tempReloadToken: number;
+  /** Changes whenever the list of published posts is known to be stale. */
+  postListVersion: number;
   setCategory: (category: string) => void;
   setTitle: (title: string) => void;
   setPreview: (preview: string) => void;
@@ -25,6 +27,9 @@ export type PostDraftContextValue = {
   startEditSession: (postId: string, postTitle: string) => void;
   clearEditSession: () => void;
   requestTempReload: () => void;
+  /** Back to an empty new post: draft, preview and edit session; temp images are reloaded. */
+  resetDraft: () => void;
+  notifyPostsChanged: () => void;
 };
 
 export const PostDraftContext = createContext<PostDraftContextValue | null>(null);

@@ -134,6 +134,7 @@
   cursor: pointer;
   align-self: flex-start;
 }
+
 .form-panel-button:disabled {
   opacity: 0.5;
   cursor: default;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PostCard } from "@mdpc/shared/contracts/loadCards.ts";
+import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
 import { useI18n } from "../../i18n";
 import { describeClientFailure } from "../../i18n/errors";
@@ -25,20 +26,23 @@ function mapCardsToDropdownPosts(cards: PostCard[]): DropdownPost[] {
   }));
 }
 
-/** Loads the post cards (including inactive ones) the first time the dropdown opens. */
+/** Loads the post cards (including inactive ones) when the dropdown opens and the list is stale. */
 export function usePostList(isOpen: boolean) {
   const { t } = useI18n();
+  const { postListVersion } = usePostDraft();
   const password = useAdminPassword();
   const { lockIfUnauthorized } = useAdminAuth();
   const [posts, setPosts] = useState<DropdownPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadedVersion, setLoadedVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen || hasLoaded) {
+    if (!isOpen || loadedVersion === postListVersion) {
       return;
     }
+
+    let active = true;
 
     async function loadCards() {
       setIsLoading(true);
@@ -46,6 +50,7 @@ export function usePostList(isOpen: boolean) {
 
       try {
         const result = await loadCardsService(password);
+        if (!active) return;
 
         if (!result.ok) {
           if (!lockIfUnauthorized(result.status)) {
@@ -55,16 +60,23 @@ export function usePostList(isOpen: boolean) {
         }
 
         setPosts(mapCardsToDropdownPosts(result.data));
-        setHasLoaded(true);
+        setLoadedVersion(postListVersion);
       } catch {
+        if (!active) return;
         setError(t("preview.loadPostsUnexpected"));
       } finally {
-        setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       }
     }
 
     void loadCards();
-  }, [hasLoaded, isOpen, password, lockIfUnauthorized, t]);
+
+    return () => {
+      active = false;
+    };
+  }, [loadedVersion, postListVersion, isOpen, password, lockIfUnauthorized, t]);
 
   function removePost(id: string) {
     setPosts((prev) => prev.filter((post) => post.id !== id));
