@@ -175,11 +175,13 @@ export async function uploadContentImages(
 
 		validateImageFile(file)
 
-		const ext = file.name.split(".").pop()
+		const dotIndex = file.name.lastIndexOf(".")
+		const ext = dotIndex >= 0 ? file.name.slice(dotIndex + 1) : ""
 
 		if (!ext) throw new Error("INVALID_IMAGE_EXTENSION")
 
-		const shortName = file.name.split(".")[0]
+		// Only the last dot separates the extension: "my.photo.png" -> "my.photo".
+		const shortName = file.name.slice(0, dotIndex)
 
 		if (usedNames.has(shortName)) {
 			throw new Error("DUPLICATE_IMAGE_NAME")
