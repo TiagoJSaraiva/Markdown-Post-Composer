@@ -154,6 +154,15 @@ describe("buildPreviewMarkdown", () => {
     );
   });
 
+  it("accepts ./name and name.ext, keeps titles and leaves plain text alone", () => {
+    const item = image({ name: "cat", pendingName: "cat", storagePath: "tmp/cat__v__1.jpg" });
+    const md = '![a](./cat "Kitty") ![b](cat.png) see (cat)';
+
+    expect(buildPreviewMarkdown(md, [item])).toBe(
+      '![a](https://cdn/cat.jpg?v=1 "Kitty") ![b](https://cdn/cat.jpg?v=1) see (cat)',
+    );
+  });
+
   it("skips images without storagePath or publicUrl", () => {
     const md = "![a](cat)";
 

@@ -2,7 +2,7 @@
  * Draft model and its pure rules: image naming, pre-save validation, unsaved-changes
  * detection and preview markdown. Used by the draft context, the editor and the form panel.
  */
-import { escapeRegExp } from "./escapeRegExp";
+import { lookupLocalImage, rewriteImageTargets } from "@mdpc/shared/domain/markdownImageRefs.ts";
 import { getFileNameFromPath, stripExtension } from "./fileNames";
 import { getMarkdownImageReferences } from "./markdownImages";
 
@@ -218,7 +218,9 @@ export function hasPendingDraftChanges(draft: PostDraftState, isEditing: boolean
 }
 
 /**
- * Replaces `(<local image name>)` with `(<public temp URL>)` so the preview can show the images.
+ * Points local image references at their public temp URL so the preview can show the
+ * images. Uses the same reference rules as the server (`name`, `./name`, `name.ext`,
+ * optional title), so what the preview shows is what gets published.
  *
  * @param contentMarkdown - Post body.
  * @param tempImages - Image slots; those without an upload are skipped.
@@ -228,23 +230,23 @@ export function buildPreviewMarkdown(
   contentMarkdown: string,
   tempImages: Array<Pick<TempImageItem, "name" | "pendingName" | "storagePath" | "publicUrl">>
 ): string {
-  let result = contentMarkdown;
+  const urlsByName: Record<string, string> = {};
 
   for (const item of tempImages) {
     if (!item.storagePath || !item.publicUrl) {
       continue;
     }
 
-    const publicUrl = item.publicUrl;
     const aliases = [item.name, item.pendingName, getFileNameFromPath(item.storagePath)]
       .map((value) => value.trim())
       .filter(Boolean);
 
     for (const alias of aliases) {
-      const regex = new RegExp(`\\(${escapeRegExp(alias)}\\)`, "g");
-      result = result.replace(regex, () => `(${publicUrl})`);
+      if (!Object.hasOwn(urlsByName, alias)) {
+        urlsByName[alias] = item.publicUrl;
+      }
     }
   }
 
-  return result;
+  return rewriteImageTargets(contentMarkdown, (target) => lookupLocalImage(target, urlsByName) ?? null);
 }

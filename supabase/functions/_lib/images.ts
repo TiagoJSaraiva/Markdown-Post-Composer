@@ -8,6 +8,7 @@ import {
   MAX_IMAGE_BYTES
 } from "../../../shared/constants/images.ts"
 import { POST_ERROR_CODES } from "../../../shared/contracts/postErrorCodes.ts"
+import { lookupLocalImage, rewriteImageTargets } from "../../../shared/domain/markdownImageRefs.ts"
 import { splitFileName } from "../../../shared/domain/tempImageNaming.ts"
 import { appError, imageTooLarge, invalidImageType } from "./errors.ts"
 
@@ -104,28 +105,19 @@ export function planContentImages(postId: string, files: File[]): ContentImage[]
   return images
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 /**
- * Replaces `(name)` references in the markdown with `(path)`. Single pass with
- * a replacer function: replaced paths are never rescanned and `$` in a file
- * name is not treated as a replacement pattern.
+ * Replaces local image references (`![alt](name)`, `./name`, `name.ext`, with or
+ * without a title) by their storage path, following the shared rules in
+ * `shared/domain/markdownImageRefs.ts`. Text outside image syntax is untouched,
+ * replaced paths are never rescanned and `$` in a path is literal.
  *
  * @param markdown - Post markdown.
- * @param paths - Map of image key to storage path.
+ * @param paths - Map of image key (name without extension) to storage path.
  * @returns The markdown with the references replaced.
  * @example
- * replaceImagePaths("![cat](cat) ![dog](dog)", { cat: "id/cat.png", dog: "id/dog.png" })
- * // "![cat](id/cat.png) ![dog](id/dog.png)"
+ * replaceImagePaths('![cat](cat) ![dog](./dog.png "Rex")', { cat: "id/cat.png", dog: "id/dog.png" })
+ * // '![cat](id/cat.png) ![dog](id/dog.png "Rex")'
  */
 export function replaceImagePaths(markdown: string, paths: Record<string, string>): string {
-  const names = Object.keys(paths)
-
-  if (names.length === 0) return markdown
-
-  const regex = new RegExp(`\\((${names.map(escapeRegExp).join("|")})\\)`, "g")
-
-  return markdown.replace(regex, (_match, name: string) => `(${paths[name]})`)
+  return rewriteImageTargets(markdown, (target) => lookupLocalImage(target, paths) ?? null)
 }

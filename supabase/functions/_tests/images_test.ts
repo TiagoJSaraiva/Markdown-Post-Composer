@@ -78,24 +78,37 @@ Deno.test("planContentImages validates every file", () => {
   assertEquals(codeOf(() => planContentImages("p1", [file("a.png"), file("b.gif", "image/gif")])), "INVALID_IMAGE_TYPE")
 })
 
-Deno.test("replaceImagePaths rewrites only parenthesised references", () => {
-  const out = replaceImagePaths("![a](a) a (a) and ![b](b)", { a: "p/a.png", b: "p/b.png" })
+Deno.test("replaceImagePaths rewrites image references only, never plain text", () => {
+  const out = replaceImagePaths("![a](a) a (a) and [link](a) ![b](b)", { a: "p/a.png", b: "p/b.png" })
 
-  assertEquals(out, "![a](p/a.png) a (p/a.png) and ![b](p/b.png)")
+  assertEquals(out, "![a](p/a.png) a (a) and [link](a) ![b](p/b.png)")
+})
+
+Deno.test("replaceImagePaths accepts ./name, name.ext and keeps titles", () => {
+  const paths = { cat: "p/cat.png", dog: "p/dog.jpg" }
+  const md = '![1](./cat) ![2](cat.png "Kitty") ![3](./dog.jpeg (Rex)) ![4]( dog  )'
+
+  assertEquals(replaceImagePaths(md, paths), '![1](p/cat.png) ![2](p/cat.png "Kitty") ![3](p/dog.jpg (Rex)) ![4](p/dog.jpg)')
+})
+
+Deno.test("replaceImagePaths leaves paths, URLs and unknown names untouched", () => {
+  const md = "![a](x/cat) ![b](https://h/cat) ![c](cat?v=1) ![d](other)"
+
+  assertEquals(replaceImagePaths(md, { cat: "p/cat.png" }), md)
 })
 
 Deno.test("replaceImagePaths treats $ in paths literally", () => {
   assertEquals(replaceImagePaths("![x](x)", { x: "p/$&$1$$.png" }), "![x](p/$&$1$$.png)")
 })
 
-Deno.test("replaceImagePaths escapes regex characters in names", () => {
-  assertEquals(replaceImagePaths("(a.b) (aXb) (c+d)", { "a.b": "P1", "c+d": "P2" }), "(P1) (aXb) (P2)")
+Deno.test("replaceImagePaths matches names with regex metacharacters literally", () => {
+  assertEquals(replaceImagePaths("![](a.b) ![](aXb) ![](c+d)", { "a.b": "P1", "c+d": "P2" }), "![](P1) ![](aXb) ![](P2)")
 })
 
 Deno.test("replaceImagePaths handles overlapping names without rescanning", () => {
   const paths = { img: "p/img.png", "img.1": "p/img.1.png", p: "p/p.png" }
 
-  assertEquals(replaceImagePaths("(img) (img.1) (p)", paths), "(p/img.png) (p/img.1.png) (p/p.png)")
+  assertEquals(replaceImagePaths("![](img) ![](img.1) ![](p)", paths), "![](p/img.png) ![](p/img.1.png) ![](p/p.png)")
 })
 
 Deno.test("replaceImagePaths returns the markdown untouched without images", () => {

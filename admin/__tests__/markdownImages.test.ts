@@ -33,10 +33,12 @@ describe("normalizeRefName", () => {
   it.each([
     ["photo", "photo"],
     ["  photo  ", "photo"],
-    ['"photo.jpg"', "photo.jpg"],
-    ["dir/sub/photo.jpg", "photo.jpg"],
-    ["photo.jpg?v=1#x", "photo.jpg"],
-    ["dir/photo.jpg/", "photo.jpg"],
+    ["./photo.jpg", "photo.jpg"],
+    // Kept as written so validation reports them (the server would not rewrite them).
+    ["photo.jpg?v=1#x", "photo.jpg?v=1#x"],
+    // Storage paths are not local references.
+    ["dir/sub/photo.jpg", ""],
+    ["./dir/photo.jpg", ""],
   ])("%s -> %s", (raw, expected) => {
     expect(normalizeRefName(raw)).toBe(expected);
   });
@@ -44,7 +46,7 @@ describe("normalizeRefName", () => {
 
 describe("getMarkdownImageReferences", () => {
   it("returns local references with and without extension", () => {
-    const md = '![a](photo) text ![b](id/cat.jpg "title") ![](  dog.png )';
+    const md = '![a](photo) text ![b](./cat.jpg "title") ![](  dog.png ) ![c](id/stored.jpg)';
 
     expect(getMarkdownImageReferences(md)).toEqual([
       { raw: "photo", normalized: "photo", normalizedNoExt: "photo" },
