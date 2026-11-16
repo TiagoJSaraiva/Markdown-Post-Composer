@@ -52,7 +52,11 @@ function toParam(value: unknown): string {
 
 /** Translated message for a backend error code and its optional details. */
 export function translateErrorCode(t: Translate, code: string, details?: ApiErrorDetails): string {
-  const key = isPostErrorCode(code) ? ERROR_KEYS[code] : CLIENT_ERROR_KEYS[code];
+  const key = isPostErrorCode(code)
+    ? ERROR_KEYS[code]
+    : Object.hasOwn(CLIENT_ERROR_KEYS, code)
+      ? CLIENT_ERROR_KEYS[code]
+      : undefined;
 
   if (!key) {
     return t("error.UNKNOWN", { code });
