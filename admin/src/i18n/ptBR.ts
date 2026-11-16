@@ -158,7 +158,6 @@ Para saber  mais de markdown, clique [aqui](https://www.markdownguide.org/basic-
   "error.WRONG_PASSWORD": "Senha incorreta.",
   "error.POST_NOT_FOUND": "Post não encontrado.",
   "error.INVALID_TITLE": "Título inválido.",
-  "error.MISSING_IMAGES": "Algumas imagens usadas no texto não foram enviadas.",
   "error.DUPLICATE_IMAGE_NAME": "Duas imagens têm o mesmo nome.",
   "error.TITLE_OR_SLUG_ALREADY_EXISTS": "Já existe um post com este título.",
   "error.INVALID_EXTENSION": "Extensão de imagem inválida.",

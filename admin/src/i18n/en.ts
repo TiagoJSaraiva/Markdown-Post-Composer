@@ -157,7 +157,6 @@ To learn more about markdown, click [here](https://www.markdownguide.org/basic-s
   "error.WRONG_PASSWORD": "Wrong password.",
   "error.POST_NOT_FOUND": "Post not found.",
   "error.INVALID_TITLE": "Invalid title.",
-  "error.MISSING_IMAGES": "Some images used in the text were not sent.",
   "error.DUPLICATE_IMAGE_NAME": "Two images have the same name.",
   "error.TITLE_OR_SLUG_ALREADY_EXISTS": "A post with this title already exists.",
   "error.INVALID_EXTENSION": "Invalid image extension.",
