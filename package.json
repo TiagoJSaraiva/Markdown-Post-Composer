@@ -9,6 +9,8 @@
     "dev": "pnpm -C admin dev",
     "build": "pnpm -C admin build",
     "lint": "pnpm -C admin lint",
+    "test": "pnpm -C shared test && pnpm test:functions",
+    "test:functions": "deno test --allow-env --allow-read --config supabase/functions/_tests/deno.json supabase/functions/_tests",
     "supabase": "supabase"
   },
   "devDependencies": {
