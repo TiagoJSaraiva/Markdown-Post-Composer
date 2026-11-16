@@ -25,10 +25,9 @@ const sanitizeSchema = {
   }
 }
 
-type ImgProps = Parameters<NonNullable<Components["img"] & ((...args: never[]) => unknown)>>[0]
-
 const defaultComponents: Components = {
-  img: (props: ImgProps) => <img loading="lazy" decoding="async" {...props} />
+  // `node` is the hast element react-markdown passes along; it is not a DOM attribute.
+  img: ({ node: _node, ...props }) => <img loading="lazy" decoding="async" {...props} />
 }
 
 export default function MarkdownRenderer({
