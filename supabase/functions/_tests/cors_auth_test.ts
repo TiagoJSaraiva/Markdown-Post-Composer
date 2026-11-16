@@ -12,7 +12,8 @@ const config: FunctionConfig = {
   allowedOrigins: ["https://admin.example.com", "http://localhost:5173"],
   categories: ["BLOG"],
   postsBucket: "post-images",
-  tempBucket: "temp"
+  tempBucket: "temp",
+  publicStorageUrl: null
 }
 
 Deno.test("isOriginAllowed: no Origin header is allowed", () => {

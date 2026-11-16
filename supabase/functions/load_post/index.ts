@@ -46,7 +46,7 @@ Deno.serve(createHandler({ methods: ["GET"] }, async ({ req, config, jsonHeaders
     active: post.active,
     slug: post.slug,
     banner_path: post.banner_path,
-    banner_url: getPublicUrl(bucket, post.banner_path),
+    banner_url: getPublicUrl(bucket, post.banner_path, config.publicStorageUrl),
     content_markdown: post.content_markdown,
     image_paths: filePaths.filter((path) => path !== post.banner_path)
   }

@@ -26,6 +26,7 @@ import {
   splitFileName,
   withVersionParam
 } from "@shared/domain/tempImageNaming.ts"
+import type { FunctionConfig } from "../_lib/config.ts"
 import { appError, invalidImageType } from "../_lib/errors.ts"
 import type { HandlerContext } from "../_lib/http.ts"
 import { createHandler, jsonResponse, readFormData, readJsonBody } from "../_lib/http.ts"
@@ -63,16 +64,16 @@ Deno.serve(createHandler(
   }
 ))
 
-function toTempImage(tempBucket: string, path: string): TempImage {
+function toTempImage(config: FunctionConfig, path: string): TempImage {
   return {
     name: getDisplayNameFromPath(path),
     path,
-    publicUrl: withVersionParam(getPublicUrl(tempBucket, path), path)
+    publicUrl: withVersionParam(getPublicUrl(config.tempBucket, path, config.publicStorageUrl), path)
   }
 }
 
-function imageResponse(tempBucket: string, path: string, headers: HeadersInit): Response {
-  const payload: TempImageSuccessResponse = { success: true, data: toTempImage(tempBucket, path) }
+function imageResponse(config: FunctionConfig, path: string, headers: HeadersInit): Response {
+  const payload: TempImageSuccessResponse = { success: true, data: toTempImage(config, path) }
 
   return jsonResponse(payload, headers)
 }
@@ -120,7 +121,7 @@ async function handleList({ config, jsonHeaders }: HandlerContext): Promise<Resp
   const paths = await listAllTempPaths(config.tempBucket)
   const payload: ListTempImagesSuccessResponse = {
     success: true,
-    data: paths.map((path) => toTempImage(config.tempBucket, path))
+    data: paths.map((path) => toTempImage(config, path))
   }
 
   return jsonResponse(payload, jsonHeaders)
@@ -158,7 +159,7 @@ async function handleUpload({ req, config, jsonHeaders }: HandlerContext): Promi
     throw error
   }
 
-  return imageResponse(config.tempBucket, path, jsonHeaders)
+  return imageResponse(config, path, jsonHeaders)
 }
 
 async function handleRename({ req, config, jsonHeaders }: HandlerContext): Promise<Response> {
@@ -178,7 +179,7 @@ async function handleRename({ req, config, jsonHeaders }: HandlerContext): Promi
   const nextPath = buildTempFileName(body.name, extension, keepToken)
 
   if (nextPath === currentPath) {
-    return imageResponse(config.tempBucket, currentPath, jsonHeaders)
+    return imageResponse(config, currentPath, jsonHeaders)
   }
 
   try {
@@ -195,7 +196,7 @@ async function handleRename({ req, config, jsonHeaders }: HandlerContext): Promi
     throw error
   }
 
-  return imageResponse(config.tempBucket, nextPath, jsonHeaders)
+  return imageResponse(config, nextPath, jsonHeaders)
 }
 
 async function handleDelete({ req, config, jsonHeaders }: HandlerContext): Promise<Response> {
@@ -248,5 +249,5 @@ async function handleImport({ req, config, jsonHeaders }: HandlerContext): Promi
     throw error
   }
 
-  return imageResponse(config.tempBucket, path, jsonHeaders)
+  return imageResponse(config, path, jsonHeaders)
 }

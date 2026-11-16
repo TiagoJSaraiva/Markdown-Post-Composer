@@ -26,7 +26,7 @@ Deno.serve(createHandler({ methods: ["GET"] }, async ({ req, config, jsonHeaders
     preview: post.preview,
     post_type: post.post_type,
     active: post.active,
-    banner_url: getPublicUrl(config.postsBucket, post.banner_path)
+    banner_url: getPublicUrl(config.postsBucket, post.banner_path, config.publicStorageUrl)
   }))
 
   const payload: LoadCardsSuccessResponse = { success: true, data: cards }

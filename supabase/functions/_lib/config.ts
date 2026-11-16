@@ -21,6 +21,12 @@ export type FunctionConfig = {
   postsBucket: string
   /** MDPC_TEMP_BUCKET: bucket holding temp images. */
   tempBucket: string
+  /**
+   * MDPC_PUBLIC_STORAGE_URL: optional public base for Storage URLs
+   * (`.../storage/v1/object/public`). Needed locally, where SUPABASE_URL is the
+   * Docker-internal host; null means "derive from SUPABASE_URL".
+   */
+  publicStorageUrl: string | null
 }
 
 /**
@@ -104,8 +110,30 @@ function readConfig(): FunctionConfig {
     allowedOrigins: parseAllowedOrigins(Deno.env.get("MDPC_ALLOWED_ORIGINS")),
     categories: parseCategories(Deno.env.get("MDPC_POST_CATEGORIES")),
     postsBucket: resolvePostImagesBucket(Deno.env.get("MDPC_POSTS_BUCKET")),
-    tempBucket: resolveTempBucket(Deno.env.get("MDPC_TEMP_BUCKET"))
+    tempBucket: resolveTempBucket(Deno.env.get("MDPC_TEMP_BUCKET")),
+    publicStorageUrl: parsePublicStorageUrl(Deno.env.get("MDPC_PUBLIC_STORAGE_URL"))
   }
+}
+
+function parsePublicStorageUrl(raw: string | undefined): string | null {
+  const value = raw?.trim()
+
+  if (!value) return null
+
+  try {
+    const parsed = new URL(value)
+
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return value.replace(/\/+$/, "")
+    }
+  } catch {
+    // reported below
+  }
+
+  throw new ConfigError(
+    "MDPC_PUBLIC_STORAGE_URL",
+    `invalid URL "${value}" (expected e.g. http://127.0.0.1:54321/storage/v1/object/public)`
+  )
 }
 
 /**

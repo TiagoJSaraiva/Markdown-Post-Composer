@@ -2,6 +2,7 @@
  * Thin wrapper over Supabase Storage (upload, list, move, copy, remove, public
  * URL) with error classification. Used by the post handlers and temp_images.
  */
+import { buildStoragePublicUrl } from "../../../shared/client/storageUrls.ts"
 import { imageTooLarge, invalidImageType } from "./errors.ts"
 import { getSupabase } from "./supabaseClient.ts"
 
@@ -66,9 +67,15 @@ export function isStorageConflict(error: unknown): boolean {
  *
  * @param bucket - Bucket name.
  * @param path - Object path.
+ * @param publicStorageUrl - Public Storage base (FunctionConfig.publicStorageUrl);
+ *   when null the URL is derived from SUPABASE_URL by supabase-js.
  * @returns The public URL.
  */
-export function getPublicUrl(bucket: string, path: string): string {
+export function getPublicUrl(bucket: string, path: string, publicStorageUrl: string | null = null): string {
+  if (publicStorageUrl) {
+    return buildStoragePublicUrl(path, { storagePublicUrl: publicStorageUrl, bucket })
+  }
+
   const { data } = getSupabase().storage.from(bucket).getPublicUrl(path)
 
   return data.publicUrl

@@ -8,7 +8,8 @@ const VARS = [
   "MDPC_ALLOWED_ORIGINS",
   "MDPC_POST_CATEGORIES",
   "MDPC_POSTS_BUCKET",
-  "MDPC_TEMP_BUCKET"
+  "MDPC_TEMP_BUCKET",
+  "MDPC_PUBLIC_STORAGE_URL"
 ]
 
 type ConfigModule = typeof import("../_lib/config.ts")
@@ -62,7 +63,8 @@ Deno.test("getConfig applies defaults", async () => {
       allowedOrigins: [],
       categories: ["BLOG"],
       postsBucket: "post-images",
-      tempBucket: "temp"
+      tempBucket: "temp",
+      publicStorageUrl: null
     })
   })
 })
@@ -136,4 +138,20 @@ Deno.test("getConfig memoizes success but does not cache failures", async () => 
     Deno.env.set("MDPC_ADMIN_PASSWORD", "second")
     assert(getConfig() === first)
   })
+})
+
+Deno.test("getConfig trims the public storage URL and rejects invalid ones", async () => {
+  await withEnv(
+    { MDPC_ADMIN_PASSWORD: "x", MDPC_PUBLIC_STORAGE_URL: " http://127.0.0.1:54321/storage/v1/object/public/ " },
+    async () => {
+      const { getConfig } = await loadFresh()
+
+      assertEquals(getConfig().publicStorageUrl, "http://127.0.0.1:54321/storage/v1/object/public")
+    }
+  )
+
+  assertEquals(
+    await configErrorVariable({ MDPC_ADMIN_PASSWORD: "x", MDPC_PUBLIC_STORAGE_URL: "kong:8000" }),
+    "MDPC_PUBLIC_STORAGE_URL"
+  )
 })
