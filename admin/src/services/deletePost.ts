@@ -1,26 +1,10 @@
-import { deletePost } from "../lib/edgeFunctionsPaths"
-import { getPasswordRequiredError, handleRequest } from "@shared/services/requestHelpers"
+import { functionUrl } from "../lib/edgeFunctionsPaths"
+import { buildAdminHeaders, handleRequest } from "@mdpc/shared/services/requestHelpers.ts"
 
 export default async function deletePostService(id: string, password: string) {
-
-  const passwordError = getPasswordRequiredError(password)
-
-  if (passwordError) return passwordError
-
-  const result = await handleRequest(fetch(deletePost, {
+  return handleRequest(fetch(functionUrl("delete_post"), {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      id: id,
-      password: password
-    })
+    headers: buildAdminHeaders(password, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ id })
   }))
-
-  console.log("STATUS:", result.status)
-  console.log("RESPOSTA:", result.data)
-
-  return result
-
 }

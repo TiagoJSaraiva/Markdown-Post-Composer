@@ -9,7 +9,10 @@
     "./react": "./react/index.ts",
     "./contracts/*": "./contracts/*",
     "./domain/*": "./domain/*",
-    "./constants/*": "./constants/*"
+    "./constants/*": "./constants/*",
+    "./services/*": "./services/*",
+    "./types/*": "./types/*",
+    "./utils/*": "./utils/*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."

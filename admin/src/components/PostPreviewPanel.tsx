@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { isLoadCardsSuccessResponse, type PostCard } from "@shared/contracts/loadCards";
-import { isLoadPostSuccessResponse, type PostDetails } from "@shared/contracts/loadPost";
-import { isObjectRecord } from "@shared/utils/objectGuards";
+import type { PostCard } from "@mdpc/shared/contracts/loadCards.ts";
+import type { PostDetails } from "@mdpc/shared/contracts/loadPost.ts";
+import { MarkdownRenderer } from "@mdpc/shared/react";
 import loadCardsService from "../services/loadCards";
 import deletePostService from "../services/deletePost";
 import loadPostService from "../services/loadPost";
 import PostDropdownItem from "./PostDropdownItem";
 import { usePostDraft } from "../app/postDraftContext";
-import { MarkdownRenderer } from "./markdown";
+import { useAdminAuth, useAdminPassword } from "../auth/authContext";
+import { ApiError } from "../lib/apiError";
+import { getPostsClient } from "../lib/postsClient";
+import { useI18n } from "../i18n";
+import { describeClientFailure, describeError, describeServiceFailure } from "../i18n/errors";
 import AppModal from "./AppModal";
 import { clearTempImages, importPostImageToTemp } from "../services/tempImages";
 import "../assets/css/PostPreviewPanel.css";
@@ -22,34 +26,7 @@ type DropdownPost = {
   postType?: string;
 };
 
-type DeleteModalState = "closed" | "asking_password" | "submitting" | "result";
-
-function extractRequestErrorMessage(data: unknown, status: number): string {
-  if (isObjectRecord(data) && typeof data.error === "string" && data.error) {
-    return data.error;
-  }
-
-  return `Falha ao carregar cards (status ${status}).`;
-}
-
-
-function humanizeErrorMessage(error: string): string {
-  const normalized = error.replace(/_/g, " ").trim().toLowerCase();
-
-  if (!normalized) {
-    return "";
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function extractBackendError(data: unknown): string | null {
-  if (isObjectRecord(data) && typeof data.error === "string" && data.error) {
-    return data.error;
-  }
-
-  return null;
-}
+type DeleteModalState = "closed" | "confirming" | "submitting" | "result";
 
 function stripExtension(fileName: string): string {
   const dotIndex = fileName.lastIndexOf(".");
@@ -132,6 +109,9 @@ export default function PostPreviewPanel() {
     startEditSession,
     requestTempReload
   } = usePostDraft();
+  const { t } = useI18n();
+  const password = useAdminPassword();
+  const { lockIfUnauthorized } = useAdminAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoadingCards, setIsLoadingCards] = useState(false);
   const [hasLoadedCards, setHasLoadedCards] = useState(false);
@@ -139,7 +119,6 @@ export default function PostPreviewPanel() {
   const [dropdownPosts, setDropdownPosts] = useState<DropdownPost[]>([]);
   const [deleteModalState, setDeleteModalState] = useState<DeleteModalState>("closed");
   const [deleteTargetPostId, setDeleteTargetPostId] = useState<string | null>(null);
-  const [deletePassword, setDeletePassword] = useState("");
   const [deleteResultTitle, setDeleteResultTitle] = useState("");
   const [deleteResultMessage, setDeleteResultMessage] = useState("");
   const [deleteResultDetails, setDeleteResultDetails] = useState<string | null>(null);
@@ -176,23 +155,22 @@ export default function PostPreviewPanel() {
     setEditErrorMessage(null);
 
     try {
-      await clearTempImages();
+      await clearTempImages(password);
 
       const postResult = await loadPostService(editTargetPost.id);
 
-      if (postResult.status !== 200 || !isLoadPostSuccessResponse(postResult.data)) {
-        const backendError = extractBackendError(postResult.data);
-        throw new Error(backendError ? humanizeErrorMessage(backendError) : `Falha ao carregar post (status ${postResult.status}).`);
+      if (!postResult.ok) {
+        throw new ApiError(postResult.status, postResult.error, postResult.details);
       }
 
       const postData: PostDetails = {
-        ...postResult.data.data,
-        image_paths: postResult.data.data.image_paths.length > 0
-          ? postResult.data.data.image_paths
-          : extractRelativeImagePathsFromMarkdown(postResult.data.data.content_markdown),
+        ...postResult.data,
+        image_paths: postResult.data.image_paths.length > 0
+          ? postResult.data.image_paths
+          : extractRelativeImagePathsFromMarkdown(postResult.data.content_markdown),
       };
 
-      await Promise.all(postData.image_paths.map((path) => importPostImageToTemp(path)));
+      await Promise.all(postData.image_paths.map((path) => importPostImageToTemp(password, path)));
 
       const editableMarkdown = reverseMarkdownImagePaths(postData.content_markdown, postData.image_paths);
 
@@ -212,8 +190,11 @@ export default function PostPreviewPanel() {
       setIsDropdownOpen(false);
       setEditTargetPost(null);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Falha inesperada ao preparar edição.";
-      setEditErrorMessage(message);
+      if (lockIfUnauthorized(error)) {
+        return;
+      }
+
+      setEditErrorMessage(error instanceof ApiError ? describeError(t, error) : t("preview.prepareUnexpected"));
     } finally {
       setIsPreparingEdit(false);
     }
@@ -229,35 +210,36 @@ export default function PostPreviewPanel() {
       setCardsError(null);
 
       try {
-        const result = await loadCardsService();
+        const result = await loadCardsService(password);
 
-        if (result.status !== 200 || !isLoadCardsSuccessResponse(result.data)) {
-          setCardsError(extractRequestErrorMessage(result.data, result.status));
+        if (!result.ok) {
+          if (!lockIfUnauthorized(result.status)) {
+            setCardsError(describeClientFailure(t, result));
+          }
           return;
         }
 
-        const mappedPosts = mapCardsToDropdownPosts(result.data.data);
+        const mappedPosts = mapCardsToDropdownPosts(result.data);
 
         setDropdownPosts(mappedPosts);
         setHasLoadedCards(true);
       } catch {
-        setCardsError("Falha inesperada ao carregar cards.");
+        setCardsError(t("preview.loadPostsUnexpected"));
       } finally {
         setIsLoadingCards(false);
       }
     }
 
     void loadCards();
-  }, [hasLoadedCards, isDropdownOpen]);
+  }, [hasLoadedCards, isDropdownOpen, password, lockIfUnauthorized, t]);
 
   function openDeleteModal(postId: string) {
     setDeleteTargetPostId(postId);
-    setDeletePassword("");
     setDeleteResultTitle("");
     setDeleteResultMessage("");
     setDeleteResultDetails(null);
     setDeleteSucceeded(false);
-    setDeleteModalState("asking_password");
+    setDeleteModalState("confirming");
   }
 
   function closeDeleteModal() {
@@ -267,17 +249,8 @@ export default function PostPreviewPanel() {
   async function handleConfirmDelete() {
     if (!deleteTargetPostId) {
       setDeleteSucceeded(false);
-      setDeleteResultTitle("Erro ao apagar o post");
-      setDeleteResultMessage("Post alvo não encontrado.");
-      setDeleteResultDetails(null);
-      setDeleteModalState("result");
-      return;
-    }
-
-    if (!deletePassword.trim()) {
-      setDeleteSucceeded(false);
-      setDeleteResultTitle("Erro ao apagar o post");
-      setDeleteResultMessage("Informe a senha para apagar o post.");
+      setDeleteResultTitle(t("preview.deleteErrorTitle"));
+      setDeleteResultMessage(t("preview.deleteNoTarget"));
       setDeleteResultDetails(null);
       setDeleteModalState("result");
       return;
@@ -286,28 +259,30 @@ export default function PostPreviewPanel() {
     setDeleteModalState("submitting");
 
     try {
-      const result = await deletePostService(deleteTargetPostId, deletePassword.trim());
+      const result = await deletePostService(deleteTargetPostId, password);
+
+      if (lockIfUnauthorized(result.status)) {
+        return;
+      }
 
       if (result.status >= 200 && result.status < 300) {
         setDeleteSucceeded(true);
-        setDeleteResultTitle("Sucesso");
-        setDeleteResultMessage("Post apagado com sucesso.");
+        setDeleteResultTitle(t("preview.deleteSuccessTitle"));
+        setDeleteResultMessage(t("preview.deleteSuccessMessage"));
         setDeleteResultDetails(null);
         setDeleteModalState("result");
         return;
       }
 
       setDeleteSucceeded(false);
-      setDeleteResultTitle("Erro ao apagar o post");
-      setDeleteResultMessage(`Falha ao apagar (status ${result.status}).`);
-      const backendError = extractBackendError(result.data);
-      setDeleteResultDetails(backendError ? humanizeErrorMessage(backendError) : null);
+      setDeleteResultTitle(t("preview.deleteErrorTitle"));
+      setDeleteResultMessage(t("preview.deleteFailureStatus", { status: result.status }));
+      setDeleteResultDetails(describeServiceFailure(t, result.status, result.data));
       setDeleteModalState("result");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro inesperado ao apagar.";
+    } catch {
       setDeleteSucceeded(false);
-      setDeleteResultTitle("Erro ao apagar o post");
-      setDeleteResultMessage(message);
+      setDeleteResultTitle(t("preview.deleteErrorTitle"));
+      setDeleteResultMessage(t("preview.deleteUnexpected"));
       setDeleteResultDetails(null);
       setDeleteModalState("result");
     }
@@ -332,14 +307,14 @@ export default function PostPreviewPanel() {
         aria-expanded={isDropdownOpen}
         onClick={handleToggleDropdown}
       >
-        <span>Ver posts</span>
+        <span>{t("preview.viewPosts")}</span>
         <ChevronDown className={`post-preview-panel-dropdown-icon${isDropdownOpen ? " is-open" : ""}`} size={34} />
       </button>
 
       {isDropdownOpen ? (
         <div className="post-preview-panel-dropdown">
           {isLoadingCards ? (
-            <div className="post-preview-panel-dropdown-message">carregando...</div>
+            <div className="post-preview-panel-dropdown-message">{t("preview.loading")}</div>
           ) : null}
 
           {!isLoadingCards && cardsError ? (
@@ -368,9 +343,13 @@ export default function PostPreviewPanel() {
       {!isDropdownOpen ? (
         <div className="post-preview-panel-content post_preview">
           {previewMarkdown.trim() ? (
-            <MarkdownRenderer markdown={previewMarkdown} className="post-preview-panel-markdown" />
+            <MarkdownRenderer
+              markdown={previewMarkdown}
+              className="post-preview-panel-markdown"
+              client={getPostsClient()}
+            />
           ) : (
-            <div>Preview</div>
+            <div>{t("preview.placeholder")}</div>
           )}
         </div>
       ) : null}
@@ -380,22 +359,20 @@ export default function PostPreviewPanel() {
           <div className="post-preview-panel-modal" role="dialog" aria-modal="true">
             {!isPreparingEdit ? (
               <>
-                <h3 className="post-preview-panel-modal-title">Confirmar edição</h3>
-                <p className="post-preview-panel-modal-text">
-                  Deseja editar esse post? Se houver alterações não salvas no formulário atual, elas serão descartadas.
-                </p>
+                <h3 className="post-preview-panel-modal-title">{t("preview.editConfirmTitle")}</h3>
+                <p className="post-preview-panel-modal-text">{t("preview.editConfirmText")}                </p>
                 {editErrorMessage ? (
                   <p className="post-preview-panel-modal-text">{editErrorMessage}</p>
                 ) : null}
                 <div className="post-preview-panel-modal-buttons">
-                  <button className="post-dropdown-item-action-button" onClick={closeEditConfirm}>Não</button>
-                  <button className="post-dropdown-item-action-button" onClick={() => void handleConfirmEdit()}>Sim</button>
+                  <button className="post-dropdown-item-action-button" onClick={closeEditConfirm}>{t("preview.no")}</button>
+                  <button className="post-dropdown-item-action-button" onClick={() => void handleConfirmEdit()}>{t("preview.yes")}</button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="post-preview-panel-modal-title">Preparando edição</h3>
-                <p className="post-preview-panel-modal-text">carregando...</p>
+                <h3 className="post-preview-panel-modal-title">{t("preview.preparingTitle")}</h3>
+                <p className="post-preview-panel-modal-text">{t("preview.loading")}</p>
               </>
             )}
           </div>
@@ -405,40 +382,27 @@ export default function PostPreviewPanel() {
       {deleteModalState !== "closed" ? (
         <AppModal>
           <div className="post-preview-panel-modal" role="dialog" aria-modal="true">
-            {deleteModalState === "asking_password" ? (
+            {deleteModalState === "confirming" ? (
               <>
-                <h3 className="post-preview-panel-modal-title">Confirmar exclusão</h3>
-                <p className="post-preview-panel-modal-text">Digite a senha para apagar o post.</p>
-                <input
-                  type="password"
-                  className="post-preview-panel-modal-input"
-                  value={deletePassword}
-                  onChange={(event) => setDeletePassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void handleConfirmDelete();
-                    }
-                  }}
-                  autoFocus
-                />
+                <h3 className="post-preview-panel-modal-title">{t("preview.deleteConfirmTitle")}</h3>
+                <p className="post-preview-panel-modal-text">{t("preview.deleteConfirmText")}</p>
                 <div className="post-preview-panel-modal-buttons">
-                  <button className="post-dropdown-item-action-button" onClick={closeDeleteModal}>Cancelar</button>
-                  <button className="post-dropdown-item-action-button" onClick={handleConfirmDelete}>Ok</button>
+                  <button className="post-dropdown-item-action-button" onClick={closeDeleteModal}>{t("preview.cancel")}</button>
+                  <button className="post-dropdown-item-action-button" onClick={handleConfirmDelete}>{t("preview.ok")}</button>
                 </div>
               </>
             ) : null}
 
             {deleteModalState === "submitting" ? (
               <>
-                <h3 className="post-preview-panel-modal-title">Apagando</h3>
-                <p className="post-preview-panel-modal-text">carregando...</p>
+                <h3 className="post-preview-panel-modal-title">{t("preview.deletingTitle")}</h3>
+                <p className="post-preview-panel-modal-text">{t("preview.loading")}</p>
               </>
             ) : null}
 
             {deleteModalState === "result" ? (
               <>
-                <h3 className="post-preview-panel-modal-title">{deleteResultTitle || "Erro ao apagar o post"}</h3>
+                <h3 className="post-preview-panel-modal-title">{deleteResultTitle || t("preview.deleteErrorTitle")}</h3>
                 {deleteResultMessage ? (
                   <p className="post-preview-panel-modal-text">{deleteResultMessage}</p>
                 ) : null}
@@ -446,7 +410,7 @@ export default function PostPreviewPanel() {
                   <p className="post-preview-panel-modal-text">{deleteResultDetails}</p>
                 ) : null}
                 <div className="post-preview-panel-modal-buttons">
-                  <button className="post-dropdown-item-action-button" onClick={handleDeleteResultOk}>Ok</button>
+                  <button className="post-dropdown-item-action-button" onClick={handleDeleteResultOk}>{t("preview.ok")}</button>
                 </div>
               </>
             ) : null}

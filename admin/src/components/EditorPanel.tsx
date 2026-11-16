@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe } from "lucide-react";
+import { Globe, Lock } from "lucide-react";
 import broomIcon from "../assets/img/broom.png";
 import { usePostDraft, type PostDraftState } from "../app/postDraftContext";
-import { MAIN_WEBSITE_URL } from "../config/externalLinks";
+import { ApiError } from "../lib/apiError";
+import { useAdminAuth, useAdminPassword } from "../auth/authContext";
+import { getConfig } from "../config/env";
+import { useI18n, type Translate } from "../i18n";
+import { describeError, describeServiceFailure } from "../i18n/errors";
 import AppModal from "./AppModal";
 import {
   clearTempImages,
@@ -13,80 +17,13 @@ import uploadPostService from "../services/uploadPost";
 import updatePostService from "../services/updatePost";
 import "../assets/css/EditorPanel.css";
 
-type SaveModalState = "closed" | "asking_password" | "submitting" | "result";
+type SaveModalState = "closed" | "confirming" | "submitting" | "result";
 const IMAGE_NAME_ALLOWED = /^[A-Za-z0-9]+$/;
-const MARKDOWN_HELP_TEMPLATE = `# Tutorial básico de como formatar o texto
-
-_Pra começar, clique no botão **preview** para ver como o texto fica com a formatação aplicada!_
-
-**Texto em negrito**\\
-Usar barra invertida: \\ para forçar quebra de linha
-
-Dar 1 linha vazia de distância entre duas linhas de texto também quebra linha.
-
-# Exemplo de título grande
-
-## Exemplo de título menor
-
-### Título pequeno
-
-<div align="center">
-Para centralizar texto e imagens, use isso.
-
-Também funciona pra centralizar imagens
-</div>
-
-Esses 3 hífens abaixo criam uma "divisão" no texto:
-
----
-
-Para usar imagens:
-
-![img](nomeDaImagem)
-
-Dentro do parênteses, insira o nome da imagem da mesma forma  que está no container.
-
-Para fazer lista:
-
-- Elemento um
-- Elemento dois
-- Elemento três
-
-Para fazer lista enumerada:
-
-1. Elemento um
-2. Elemento dois
-3. Elemento três
-
-Para saber  mais de markdown, clique [aqui](https://www.markdownguide.org/basic-syntax/)`;
-
 type MarkdownImageRef = {
   raw: string;
   normalized: string;
   normalizedNoExt: string;
 };
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function humanizeBackendError(error: string): string {
-  const normalized = error.replace(/_/g, " ").trim().toLowerCase();
-
-  if (!normalized) {
-    return "";
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function extractBackendError(data: unknown): string | null {
-  if (isObjectRecord(data) && typeof data.error === "string") {
-    return data.error;
-  }
-
-  return null;
-}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -165,23 +102,23 @@ function getImageAliases(item: PostDraftState["tempImages"][number]): string[] {
   return Array.from(new Set(names));
 }
 
-function validateDraftBeforeSave(draft: PostDraftState, isEditing: boolean): string[] {
+function validateDraftBeforeSave(draft: PostDraftState, isEditing: boolean, t: Translate): string[] {
   const errors = new Set<string>();
 
   if (!draft.content_markdown.trim()) {
-    errors.add("Campo markdown_content não está preenchido");
+    errors.add(t("editor.validation.contentEmpty"));
   }
 
   if (!draft.title.trim()) {
-    errors.add("Campo título não está preenchido");
+    errors.add(t("editor.validation.titleEmpty"));
   }
 
   if (!isEditing && !draft.banner) {
-    errors.add("Campo imagem do card não está preenchido");
+    errors.add(t("editor.validation.bannerEmpty"));
   }
 
   if (!draft.preview.trim()) {
-    errors.add("Campo prévia não está preenchido");
+    errors.add(t("editor.validation.previewEmpty"));
   }
 
   const markdownImageRefs = getMarkdownImageReferences(draft.content_markdown);
@@ -197,7 +134,7 @@ function validateDraftBeforeSave(draft: PostDraftState, isEditing: boolean): str
     const displayName = (item.pendingName || item.name).trim();
 
     if (displayName && !IMAGE_NAME_ALLOWED.test(displayName)) {
-      errors.add(`Imagem ${displayName} contém caracteres impróprios`);
+      errors.add(t("editor.validation.imageBadChars", { name: displayName }));
     }
 
     for (const alias of aliases) {
@@ -208,31 +145,31 @@ function validateDraftBeforeSave(draft: PostDraftState, isEditing: boolean): str
     const used = aliases.some((alias) => markdownRefsSet.has(alias) || markdownRefsNoExtSet.has(stripExtension(alias)));
 
     if (!used) {
-      errors.add(`Imagem ${displayName || aliases[0] || "sem_nome"} no container de imagens não está sendo usada`);
+      errors.add(t("editor.validation.imageUnused", { name: displayName || aliases[0] || t("editor.unnamedImage") }));
     }
   }
 
   for (const ref of markdownImageRefs) {
     if (!IMAGE_NAME_ALLOWED.test(ref.normalizedNoExt)) {
-      errors.add(`Imagem ${ref.raw} contém caracteres impróprios`);
+      errors.add(t("editor.validation.imageBadChars", { name: ref.raw }));
     }
 
     const exists = imageAliasSet.has(ref.normalized) || imageAliasNoExtSet.has(ref.normalizedNoExt);
 
     if (!exists) {
-      errors.add(`Imagem ${ref.raw} no texto do post não existe`);
+      errors.add(t("editor.validation.imageMissing", { name: ref.raw }));
     }
   }
 
   return Array.from(errors);
 }
 
-function hasPendingDraftChanges(draft: PostDraftState, isEditing: boolean): boolean {
+function hasPendingDraftChanges(draft: PostDraftState, isEditing: boolean, defaultCategory: string): boolean {
   if (isEditing) {
     return true;
   }
 
-  if (draft.category !== "BLOG") {
+  if (draft.category !== defaultCategory) {
     return true;
   }
 
@@ -291,8 +228,11 @@ export default function EditorPanel() {
     setDraftValues,
     requestTempReload
   } = usePostDraft();
+  const { t } = useI18n();
+  const password = useAdminPassword();
+  const { lock, lockIfUnauthorized } = useAdminAuth();
+  const { defaultCategory, siteUrl } = getConfig();
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("closed");
-  const [password, setPassword] = useState("");
   const [saveResultTitle, setSaveResultTitle] = useState("");
   const [saveResultMessage, setSaveResultMessage] = useState("");
   const [saveErrorList, setSaveErrorList] = useState<string[]>([]);
@@ -302,7 +242,7 @@ export default function EditorPanel() {
   const skipUnloadWarningRef = useRef(false);
 
   useEffect(() => {
-    const shouldWarn = hasPendingDraftChanges(draft, Boolean(editSession));
+    const shouldWarn = hasPendingDraftChanges(draft, Boolean(editSession), defaultCategory);
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (skipUnloadWarningRef.current) {
@@ -327,7 +267,7 @@ export default function EditorPanel() {
       }
 
       // Best effort cleanup when user really leaves/reloads the page.
-      void clearTempImages();
+      void clearTempImages(password, { keepalive: true }).catch(() => undefined);
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -337,26 +277,25 @@ export default function EditorPanel() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handlePageHide);
     };
-  }, [draft, editSession]);
+  }, [draft, editSession, defaultCategory, password]);
 
   function openSaveModal() {
-    const validationErrors = validateDraftBeforeSave(draft, Boolean(editSession));
+    const validationErrors = validateDraftBeforeSave(draft, Boolean(editSession), t);
 
     if (validationErrors.length > 0) {
       setSaveSucceeded(false);
-      setSaveResultTitle("Erro ao salvar o post");
+      setSaveResultTitle(t("editor.errorTitle"));
       setSaveResultMessage("");
       setSaveErrorList(validationErrors);
       setSaveModalState("result");
       return;
     }
 
-    setPassword("");
     setSaveResultTitle("");
     setSaveResultMessage("");
     setSaveErrorList([]);
     setSaveSucceeded(false);
-    setSaveModalState("asking_password");
+    setSaveModalState("confirming");
   }
 
   function closeSaveModal() {
@@ -366,17 +305,8 @@ export default function EditorPanel() {
   async function handleConfirmSave() {
     if (!editSession && !draft.banner) {
       setSaveSucceeded(false);
-      setSaveResultTitle("Erro ao salvar o post");
-      setSaveResultMessage("Selecione a imagem do card antes de salvar.");
-      setSaveErrorList([]);
-      setSaveModalState("result");
-      return;
-    }
-
-    if (!password.trim()) {
-      setSaveSucceeded(false);
-      setSaveResultTitle("Erro ao salvar o post");
-      setSaveResultMessage("Informe a senha para salvar.");
+      setSaveResultTitle(t("editor.errorTitle"));
+      setSaveResultMessage(t("editor.bannerRequired"));
       setSaveErrorList([]);
       setSaveModalState("result");
       return;
@@ -386,13 +316,12 @@ export default function EditorPanel() {
 
     try {
       const validTempImages = draft.tempImages.filter(
-        (item) => item.storagePath && !item.isBusy
+        (item) => item.storagePath && item.publicUrl && !item.isBusy
       );
 
       const downloadedImages = await Promise.all(
         validTempImages.map(async (item) => {
-          const storagePath = item.storagePath as string;
-          const file = await downloadTempImageAsFile(storagePath, item.pendingName || item.name);
+          const file = await downloadTempImageAsFile(item.publicUrl as string, item.pendingName || item.name);
 
           return {
             file,
@@ -409,40 +338,47 @@ export default function EditorPanel() {
         active: draft.active,
         banner: draft.banner,
         images: downloadedImages,
-        password: password.trim()
+        password
       };
 
       const result = editSession
         ? await updatePostService({ id: editSession.postId, ...basePayload })
         : await uploadPostService(basePayload);
 
+      if (lockIfUnauthorized(result.status)) {
+        return;
+      }
+
       if (result.status >= 200 && result.status < 300) {
         const cleanupTargets = validTempImages
           .map((item) => item.storagePath)
           .filter((path): path is string => Boolean(path));
 
-        await Promise.allSettled(cleanupTargets.map((path) => deleteTempImage(path)));
-        await clearTempImages();
+        await Promise.allSettled(cleanupTargets.map((path) => deleteTempImage(password, path)));
+        await clearTempImages(password);
 
         setSaveSucceeded(true);
-        setSaveResultTitle("Sucesso");
-        setSaveResultMessage("Post salvo com sucesso.");
+        setSaveResultTitle(t("editor.successTitle"));
+        setSaveResultMessage(t("editor.successMessage"));
         setSaveErrorList([]);
         setSaveModalState("result");
         return;
       }
 
       setSaveSucceeded(false);
-      setSaveResultTitle("Erro ao salvar o post");
-      setSaveResultMessage(`Falha ao salvar (status ${result.status}).`);
-      const backendError = extractBackendError(result.data);
-      setSaveErrorList(backendError ? [humanizeBackendError(backendError)] : []);
+      setSaveResultTitle(t("editor.errorTitle"));
+      setSaveResultMessage(t("editor.failureStatus", { status: result.status }));
+      const failure = describeServiceFailure(t, result.status, result.data);
+      setSaveErrorList(failure ? [failure] : []);
       setSaveModalState("result");
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro inesperado ao salvar.";
+      if (lockIfUnauthorized(error)) {
+        return;
+      }
+
       setSaveSucceeded(false);
-      setSaveResultTitle("Erro ao salvar o post");
-      setSaveResultMessage(message);
+      setSaveResultTitle(t("editor.errorTitle"));
+      setSaveResultMessage(error instanceof ApiError ? describeError(t, error) : t("editor.unexpectedError"));
       setSaveErrorList([]);
       setSaveModalState("result");
     }
@@ -465,14 +401,16 @@ export default function EditorPanel() {
 
   async function handleCancelEdit() {
     try {
-      await clearTempImages();
+      await clearTempImages(password);
+    } catch {
+      // Best effort: the page reloads either way.
     } finally {
       window.location.reload();
     }
   }
 
   function applyMarkdownHelpTemplate() {
-    setContentMarkdown(MARKDOWN_HELP_TEMPLATE);
+    setContentMarkdown(t("editor.markdownHelpTemplate"));
     setPreviewMarkdown("");
   }
 
@@ -498,10 +436,10 @@ export default function EditorPanel() {
     setIsClearingForm(true);
 
     try {
-      await clearTempImages();
+      await clearTempImages(password);
 
       setDraftValues({
-        category: "BLOG",
+        category: defaultCategory,
         title: "",
         preview: "",
         content_markdown: "",
@@ -512,13 +450,15 @@ export default function EditorPanel() {
 
       setPreviewMarkdown("");
       requestTempReload();
+    } catch (error: unknown) {
+      lockIfUnauthorized(error);
     } finally {
       setIsClearingForm(false);
     }
   }
 
   function handleOpenWebsite() {
-    window.open(MAIN_WEBSITE_URL, "_blank", "noopener,noreferrer");
+    window.open(siteUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -526,12 +466,12 @@ export default function EditorPanel() {
       <div className="editor-panel-header">
         {editSession ? (
           <>
-            <span className="editor-panel-header-prefix">Editando:</span>
+            <span className="editor-panel-header-prefix">{t("editor.editing")}</span>
             <div className="editor-panel-header-title" title={editSession.postTitle}>
               <span className="editor-panel-header-title-text">{editSession.postTitle}</span>
             </div>
           </>
-        ) : "Novo post"}
+        ) : t("editor.newPost")}
       </div>
 
       <textarea
@@ -542,18 +482,18 @@ export default function EditorPanel() {
 
       <div className="editor-panel-buttons">
         <div className="editor-panel-buttons-left">
-          <button className="editor-panel-button" onClick={openSaveModal}>Salvar</button>
+          <button className="editor-panel-button" onClick={openSaveModal}>{t("editor.save")}</button>
           {editSession ? (
-            <button className="editor-panel-button" onClick={handleCancelEdit}>Cancelar</button>
+            <button className="editor-panel-button" onClick={handleCancelEdit}>{t("editor.cancel")}</button>
           ) : null}
-          <button className="editor-panel-button" onClick={handlePreview}>Preview</button>
+          <button className="editor-panel-button" onClick={handlePreview}>{t("editor.preview")}</button>
         </div>
 
         <div className="editor-panel-buttons-right">
           <button
             type="button"
             className="editor-panel-button editor-panel-icon-button"
-            aria-label="Ajuda markdown"
+            aria-label={t("editor.markdownHelp")}
             onClick={handleHelpClick}
           >
             ?
@@ -561,18 +501,29 @@ export default function EditorPanel() {
           <button
             type="button"
             className="editor-panel-button editor-panel-icon-button"
-            aria-label="Limpar"
+            aria-label={t("editor.clear")}
             onClick={() => void handleClearAll()}
           >
-            <img src={broomIcon} alt="Limpar" className="editor-panel-icon-image" />
+            <img src={broomIcon} alt={t("editor.clear")} className="editor-panel-icon-image" />
           </button>
+          {siteUrl ? (
+            <button
+              type="button"
+              className="editor-panel-button editor-panel-icon-button"
+              aria-label={t("editor.website")}
+              onClick={handleOpenWebsite}
+            >
+              <Globe size={16} />
+            </button>
+          ) : null}
           <button
             type="button"
             className="editor-panel-button editor-panel-icon-button"
-            aria-label="Website"
-            onClick={handleOpenWebsite}
+            aria-label={t("editor.lock")}
+            title={t("editor.lock")}
+            onClick={lock}
           >
-            <Globe size={16} />
+            <Lock size={16} />
           </button>
         </div>
       </div>
@@ -580,13 +531,11 @@ export default function EditorPanel() {
       {isHelpConfirmOpen ? (
         <AppModal>
           <div className="editor-panel-modal" role="dialog" aria-modal="true">
-            <h3 className="editor-panel-modal-title">Substituir conteúdo?</h3>
-            <p className="editor-panel-modal-text">
-              Fazer isso vai substituir todo o conteúdo atual do container de texto.
-            </p>
+            <h3 className="editor-panel-modal-title">{t("editor.replaceTitle")}</h3>
+            <p className="editor-panel-modal-text">{t("editor.replaceText")}            </p>
             <div className="editor-panel-modal-buttons">
-              <button className="editor-panel-button" onClick={handleHelpConfirmCancel}>Cancelar</button>
-              <button className="editor-panel-button" onClick={handleHelpConfirmContinue}>Continuar</button>
+              <button className="editor-panel-button" onClick={handleHelpConfirmCancel}>{t("editor.cancel")}</button>
+              <button className="editor-panel-button" onClick={handleHelpConfirmContinue}>{t("editor.continue")}</button>
             </div>
           </div>
         </AppModal>
@@ -595,8 +544,8 @@ export default function EditorPanel() {
       {isClearingForm ? (
         <AppModal>
           <div className="editor-panel-modal" role="dialog" aria-modal="true">
-            <h3 className="editor-panel-modal-title">Limpando formulário</h3>
-            <p className="editor-panel-modal-text">Limpando formulário...</p>
+            <h3 className="editor-panel-modal-title">{t("editor.clearingTitle")}</h3>
+            <p className="editor-panel-modal-text">{t("editor.clearingText")}</p>
           </div>
         </AppModal>
       ) : null}
@@ -604,43 +553,30 @@ export default function EditorPanel() {
       {saveModalState !== "closed" ? (
         <AppModal>
           <div className="editor-panel-modal" role="dialog" aria-modal="true">
-            {saveModalState === "asking_password" ? (
+            {saveModalState === "confirming" ? (
               <>
-                <h3 className="editor-panel-modal-title">Confirmar salvamento</h3>
+                <h3 className="editor-panel-modal-title">{t("editor.saveConfirmTitle")}</h3>
                 <p className="editor-panel-modal-text">
-                  {editSession ? "Digite a senha para editar o post." : "Digite a senha para criar o post."}
+                  {editSession ? t("editor.saveConfirmEdit") : t("editor.saveConfirmCreate")}
                 </p>
-                <input
-                  type="password"
-                  className="editor-panel-modal-input"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void handleConfirmSave();
-                    }
-                  }}
-                  autoFocus
-                />
                 <div className="editor-panel-modal-buttons">
-                  <button className="editor-panel-button" onClick={closeSaveModal}>Cancelar</button>
-                  <button className="editor-panel-button" onClick={handleConfirmSave}>Ok</button>
+                  <button className="editor-panel-button" onClick={closeSaveModal}>{t("editor.cancel")}</button>
+                  <button className="editor-panel-button" onClick={handleConfirmSave} autoFocus>{t("editor.ok")}</button>
                 </div>
               </>
             ) : null}
 
             {saveModalState === "submitting" ? (
               <>
-                <h3 className="editor-panel-modal-title">Salvando</h3>
-                <p className="editor-panel-modal-text">Enviando post, aguarde...</p>
+                <h3 className="editor-panel-modal-title">{t("editor.savingTitle")}</h3>
+                <p className="editor-panel-modal-text">{t("editor.savingText")}</p>
               </>
             ) : null}
 
             {saveModalState === "result" ? (
               <>
                 <h3 className="editor-panel-modal-title">
-                  {saveResultTitle || (saveSucceeded ? "Sucesso" : "Erro ao salvar o post")}
+                  {saveResultTitle || (saveSucceeded ? t("editor.successTitle") : t("editor.errorTitle"))}
                 </h3>
                 {saveResultMessage ? (
                   <p className="editor-panel-modal-text">{saveResultMessage}</p>
@@ -653,7 +589,7 @@ export default function EditorPanel() {
                   </ul>
                 ) : null}
                 <div className="editor-panel-modal-buttons">
-                  <button className="editor-panel-button" onClick={handleResultOk}>Ok</button>
+                  <button className="editor-panel-button" onClick={handleResultOk}>{t("editor.ok")}</button>
                 </div>
               </>
             ) : null}

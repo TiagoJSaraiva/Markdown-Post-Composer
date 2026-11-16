@@ -1,40 +1,11 @@
-import { updatePost } from "../lib/edgeFunctionsPaths"
-import { buildPostFormData, getPasswordRequiredError, handleRequest } from "@shared/services/requestHelpers"
-import type { UpdatePostServiceParams } from "@shared/types/post"
+import { functionUrl } from "../lib/edgeFunctionsPaths"
+import { buildAdminHeaders, buildPostFormData, handleRequest } from "@mdpc/shared/services/requestHelpers.ts"
+import type { UpdatePostServiceParams } from "@mdpc/shared/types/post.ts"
 
-export default async function updatePostService({
-  id,
-  category,
-  title,
-  preview,
-  content_markdown,
-  active,
-  banner,
-  images,
-  password
-}: UpdatePostServiceParams) {
-
-  const passwordError = getPasswordRequiredError(password)
-
-  if (passwordError) return passwordError
-
-  const form = buildPostFormData({
-    id,
-    category,
-    title,
-    preview,
-    content_markdown,
-    active,
-    banner,
-    images,
-    password
-  })
-
-  const result = await handleRequest(fetch(updatePost, {
+export default async function updatePostService({ password, ...params }: UpdatePostServiceParams) {
+  return handleRequest(fetch(functionUrl("update_post"), {
     method: "PUT",
-    body: form
+    headers: buildAdminHeaders(password),
+    body: buildPostFormData(params)
   }))
-
-  console.log(result.status, result.data)
-  return result
 }

@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import "../assets/css/PostDropdownItem.css";
 
 type PostDropdownItemProps = {
@@ -19,6 +20,8 @@ export default function PostDropdownItem({
   onDelete,
   onEdit
 }: PostDropdownItemProps) {
+  const { t } = useI18n();
+
   return (
     <div className="post-dropdown-item" data-post-id={id}>
       <div className="post-dropdown-item-image-frame">
@@ -39,7 +42,7 @@ export default function PostDropdownItem({
             onClick={() => onDelete(id)}
             disabled={isActionsDisabled}
           >
-            apagar
+            {t("post.delete")}
           </button>
           <button
             type="button"
@@ -47,12 +50,12 @@ export default function PostDropdownItem({
             disabled={isActionsDisabled}
             onClick={() => onEdit(id)}
           >
-            editar
+            {t("post.edit")}
           </button>
         </div>
 
         <span className={`post-dropdown-item-status ${isActive ? "is-active" : "is-inactive"}`}>
-          {isActive ? "ativo" : "inativo"}
+          {isActive ? t("post.active") : t("post.inactive")}
         </span>
       </div>
     </div>

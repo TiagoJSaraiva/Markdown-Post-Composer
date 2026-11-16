@@ -1,0 +1,65 @@
+.status-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: var(--bg-page);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-main);
+}
+
+.status-screen-card {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background-color: var(--bg-panel);
+}
+
+.status-screen-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.status-screen-text {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.status-screen-error {
+  margin: 0;
+  color: var(--danger-text);
+  overflow-wrap: anywhere;
+}
+
+.status-screen-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.status-screen-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-screen-button:hover:not(:disabled) {
+  background-color: var(--button-bg-hover);
+}
+
+.status-screen-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
