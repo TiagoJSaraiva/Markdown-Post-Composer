@@ -114,10 +114,12 @@ export async function uploadFile(
 export async function deleteFiles(paths: string[]) {
 	if (paths.length === 0) return
 
-	await supabase
+	const { error } = await supabase
 		.storage
 		.from(getConfig().postsBucket)
 		.remove(paths)
+
+	if (error) throw error
 }
 
 export async function listAllPostFiles(postId: string) {
