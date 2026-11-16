@@ -1,41 +1,42 @@
-// deno-lint-ignore-file no-explicit-any
-
 import "@supabase/functions-js/edge-runtime.d.ts"
 import type { LoadCardsSuccessResponse, PostCard } from "@shared/contracts/loadCards.ts"
-import { POST_IMAGES_BUCKET } from "@shared/constants/storage.ts"
+import { checkAdminPassword } from "../_lib/auth.ts"
+import { getConfig } from "../_lib/config.ts"
 import { ERROR_MESSAGES } from "../_lib/errorMessages.ts"
-import { getCorsHeaders, getJsonHeaders, isOriginAllowed } from "../_lib/cors.ts"
+import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
 import { supabase } from "../_lib/supabaseClient.ts"
 
 Deno.serve(async (req) => {
 
-  const origin = req.headers.get("origin")
-  const corsHeaders = getCorsHeaders(origin)
-  const jsonHeaders = getJsonHeaders(origin)
+  const context = prepareRequest(req)
 
-  if (req.method === "OPTIONS") {
-    if (!isOriginAllowed(origin)) {
-      return new Response("Forbidden origin", { status: 403, headers: corsHeaders })
-    }
-
-    return new Response("ok", { headers: corsHeaders })
+  if (context instanceof Response) {
+    return context
   }
+
+  const { config, jsonHeaders } = context
 
   try {
 
     if (req.method !== "GET") {
-      return new Response(
-        JSON.stringify({ error: ERROR_MESSAGES.METHOD_NOT_ALLOWED }),
-        { status: 405, headers: jsonHeaders }
-      )
+      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
     }
 
     const url = new URL(req.url)
     const includeInactive = url.searchParams.get("include_inactive") === "true"
 
+    if (includeInactive) {
+      const passwordError = await checkAdminPassword(req, config, jsonHeaders)
+
+      if (passwordError) {
+        return passwordError
+      }
+    }
+
     const cardsQuery = supabase
       .from("posts")
       .select("id, title, slug, preview, banner_path, post_type, active")
+      .order("created_at", { ascending: false })
 
     if (!includeInactive) {
       cardsQuery.eq("active", true)
@@ -68,12 +69,9 @@ Deno.serve(async (req) => {
       }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
 
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: jsonHeaders }
-    )
+    return internalErrorResponse(err, jsonHeaders)
 
   }
 })
@@ -81,7 +79,7 @@ Deno.serve(async (req) => {
 function buildPublicUrl(path: string) {
   const { data } = supabase
     .storage
-    .from(POST_IMAGES_BUCKET)
+    .from(getConfig().postsBucket)
     .getPublicUrl(path)
 
   return data.publicUrl
