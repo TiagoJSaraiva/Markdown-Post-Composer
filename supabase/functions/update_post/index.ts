@@ -1,210 +1,75 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
-import { normalizePostCategory } from "@shared/domain/postCategory.ts"
-import { supabase } from "../_lib/supabaseClient.ts"
-import {
-  deleteFiles,
-  isUniqueViolation,
-  listAllPostFiles,
-  replaceImagePaths,
-  slugify,
-  uploadBanner,
-  uniqueViolationToError,
-  uploadContentImages
-} from "../_lib/auxiliaryFunctions.ts"
-import { checkAdminPassword } from "../_lib/auth.ts"
-import {
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-  knownErrorResponse
-} from "../_lib/errorMessages.ts"
-import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
+import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
+import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"
+import { appError } from "../_lib/errors.ts"
+import { createHandler, jsonResponse, readFormData } from "../_lib/http.ts"
+import { replaceImagePaths } from "../_lib/images.ts"
+import { parseUpdatePostForm } from "../_lib/postForm.ts"
+import { uploadBanner, uploadContentImages } from "../_lib/postImages.ts"
+import { findPostById, updatePost } from "../_lib/postsRepository.ts"
+import { requireSlug } from "../_lib/slug.ts"
+import { listPostFilePaths, removeFilesQuietly } from "../_lib/storage.ts"
 
-Deno.serve(async (req) => {
+Deno.serve(createHandler({ methods: ["PUT"], requireAdmin: true }, async ({ req, config, jsonHeaders }) => {
+  const form = parseUpdatePostForm(await readFormData(req), config.categories)
+  const { id } = form
+  const bucket = config.postsBucket
 
-  const context = prepareRequest(req)
+  const existingPost = await findPostById(id, ["id", "banner_path"])
 
-  if (context instanceof Response) {
-    return context
+  if (!existingPost) {
+    throw appError(POST_ERROR_CODES.POST_NOT_FOUND)
   }
 
-  const { config, jsonHeaders } = context
+  const slug = requireSlug(form.title)
 
+  const existingPaths = await listPostFilePaths(bucket, id)
+  const existingSet = new Set(existingPaths)
   const uploadedPaths: string[] = []
-  const existingPathsBeforeUpdate = new Set<string>()
+  let bannerPath = existingPost.banner_path
+  let contentPaths: Record<string, string>
 
   try {
-
-    if (req.method !== "PUT") {
-      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
-    }
-
-    const passwordError = await checkAdminPassword(req, config, jsonHeaders)
-
-    if (passwordError) {
-      return passwordError
-    }
-
-    let form: FormData
-
-    try {
-      form = await req.formData()
-    } catch {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const id = form.get("id")
-    const category = form.get("category")
-    const title = form.get("title")
-    const preview = form.get("preview")
-    const contentMarkdown = form.get("content_markdown")
-    const active = form.get("active")
-    const banner = form.get("banner")
-    const images = form.getAll("images")
-
-    const imageFiles = images.filter(
-      (image): image is File => image instanceof File
-    )
-
-    if (
-      typeof id !== "string" ||
-      typeof category !== "string" ||
-      typeof title !== "string" ||
-      typeof preview !== "string" ||
-      typeof contentMarkdown !== "string" ||
-      typeof active !== "string" ||
-      (banner !== null && !(banner instanceof File)) ||
-      imageFiles.length !== images.length
-    ) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const normalizedCategory = normalizePostCategory(category, config.categories)
-
-    if (!normalizedCategory) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const parsedActive = parseActiveValue(active)
-
-    if (parsedActive === null) {
-      return errorResponse(ERROR_MESSAGES.INVALID_FORM_DATA, 400, jsonHeaders)
-    }
-
-    const { data: existingPost, error: fetchError } = await supabase
-      .from("posts")
-      .select("id, banner_path")
-      .eq("id", id)
-      .single()
-
-    if (fetchError || !existingPost) {
-      return errorResponse(ERROR_MESSAGES.POST_NOT_FOUND, 404, jsonHeaders)
-    }
-
-    const slug = slugify(title)
-
-    if (!slug) {
-      return errorResponse(ERROR_MESSAGES.INVALID_TITLE, 400, jsonHeaders)
-    }
-
-    const existingFiles = await listAllPostFiles(id)
-    const existingPaths = existingFiles.map(file => `${id}/${file.name}`)
-
-    for (const path of existingPaths) {
-      existingPathsBeforeUpdate.add(path)
-    }
-
-    let bannerPath = existingPost.banner_path
-
-    if (banner instanceof File) {
-      bannerPath = await uploadBanner(id, banner, {
-        upsert: true,
-        mapErrors: false,
-        onUploaded: path => uploadedPaths.push(path)
-      })
-    }
-
-    const contentPaths = await uploadContentImages(id, imageFiles, {
+    // upsert: re-sent images keep their path and overwrite the old object.
+    const upload = {
       upsert: true,
-      mapErrors: false
+      mapErrors: false,
+      onUploaded: (path: string) => uploadedPaths.push(path)
+    }
+
+    if (form.banner) {
+      bannerPath = await uploadBanner(bucket, id, form.banner, upload)
+    }
+
+    contentPaths = await uploadContentImages(bucket, id, form.images, upload)
+
+    await updatePost(id, {
+      post_type: form.category,
+      title: form.title,
+      slug,
+      banner_path: bannerPath,
+      preview: form.preview,
+      content_markdown: replaceImagePaths(form.contentMarkdown, contentPaths),
+      active: form.active
     })
+  } catch (error) {
+    // Only remove what this request created: overwritten objects pre-existed.
+    const created = uploadedPaths.filter((path) => !existingSet.has(path))
 
-    const finalMarkdown = replaceImagePaths(
-      contentMarkdown,
-      contentPaths
-    )
+    await removeFilesQuietly(bucket, created, "update_post rollback")
 
-    const { error: updateError } = await supabase
-      .from("posts")
-      .update({
-        post_type: normalizedCategory,
-        title,
-        slug,
-        banner_path: bannerPath,
-        preview,
-        content_markdown: finalMarkdown,
-        active: parsedActive
-      })
-      .eq("id", id)
-
-    if (updateError) {
-      if (isUniqueViolation(updateError)) {
-        throw uniqueViolationToError(updateError)
-      }
-
-      throw updateError
-    }
-
-    const keepPaths = new Set<string>([
-      bannerPath,
-      ...Object.values(contentPaths)
-    ])
-
-    const removePaths = existingPaths.filter(path => !keepPaths.has(path))
-
-    // The row is already committed and references the new files: removing the
-    // old ones is best-effort and must not fail the request or trigger the
-    // rollback in the catch below.
-    try {
-      await deleteFiles(removePaths)
-    } catch (cleanupError) {
-      console.error("Failed to remove replaced post files after update", cleanupError)
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: SUCCESS_MESSAGES.POST_UPDATED,
-        id
-      }),
-      {
-        status: 200,
-        headers: jsonHeaders
-      }
-    )
-
-  } catch (err: unknown) {
-
-    try {
-      const cleanupPaths = uploadedPaths.filter(path => !existingPathsBeforeUpdate.has(path))
-      await deleteFiles(cleanupPaths)
-    } catch (cleanupError) {
-      console.error("Failed cleanup", cleanupError)
-    }
-
-    return knownErrorResponse(err, jsonHeaders) ?? internalErrorResponse(err, jsonHeaders)
-  }
-})
-
-function parseActiveValue(value: string): boolean | null {
-  const normalized = value.trim().toLowerCase()
-
-  if (normalized === "true") {
-    return true
+    throw error
   }
 
-  if (normalized === "false") {
-    return false
-  }
+  // The row is committed and references the new files, so removing the
+  // replaced ones is best-effort and can no longer fail the request.
+  const keepPaths = new Set<string>([bannerPath, ...Object.values(contentPaths)])
+  const obsoletePaths = existingPaths.filter((path) => !keepPaths.has(path))
 
-  return null
-}
+  await removeFilesQuietly(bucket, obsoletePaths, "update_post replaced files")
+
+  return jsonResponse(
+    { success: true, message: POST_SUCCESS_CODES.POST_UPDATED, id },
+    jsonHeaders
+  )
+}))

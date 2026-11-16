@@ -1,7 +1,7 @@
 import { ADMIN_PASSWORD_HEADER } from "../../../shared/constants/http.ts"
 import { POST_ERROR_CODES } from "../../../shared/contracts/postErrorCodes.ts"
 import type { FunctionConfig } from "./config.ts"
-import { errorResponse } from "./http.ts"
+import { appError } from "./errors.ts"
 
 async function sha256(value: string): Promise<Uint8Array> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
@@ -23,22 +23,15 @@ export async function safeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0
 }
 
-// Returns an error Response (401) when the X-Admin-Password header is missing
-// or wrong, or null when the request is authenticated.
-export async function checkAdminPassword(
-  req: Request,
-  config: FunctionConfig,
-  headers: HeadersInit
-): Promise<Response | null> {
+// Throws a 401 AppError when the X-Admin-Password header is missing or wrong.
+export async function assertAdminPassword(req: Request, config: FunctionConfig): Promise<void> {
   const provided = req.headers.get(ADMIN_PASSWORD_HEADER)
 
   if (!provided) {
-    return errorResponse(POST_ERROR_CODES.MISSING_PASSWORD, 401, headers)
+    throw appError(POST_ERROR_CODES.MISSING_PASSWORD)
   }
 
   if (!(await safeEqual(provided, config.adminPassword))) {
-    return errorResponse(POST_ERROR_CODES.WRONG_PASSWORD, 401, headers)
+    throw appError(POST_ERROR_CODES.WRONG_PASSWORD)
   }
-
-  return null
 }

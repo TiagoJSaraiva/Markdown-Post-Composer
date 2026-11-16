@@ -1,88 +1,30 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
-import type { DeletePostRequestBody } from "@shared/contracts/deletePost.ts"
-import { supabase } from "../_lib/supabaseClient.ts"
-import {
-  deleteFiles,
-  listAllPostFiles
-} from "../_lib/auxiliaryFunctions.ts"
-import { checkAdminPassword } from "../_lib/auth.ts"
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../_lib/errorMessages.ts"
-import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
+import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
+import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"
+import { isObjectRecord } from "@shared/utils/objectGuards.ts"
+import { appError } from "../_lib/errors.ts"
+import { createHandler, jsonResponse, readJsonBody } from "../_lib/http.ts"
+import { deletePostById, findPostById } from "../_lib/postsRepository.ts"
+import { listPostFilePaths, removeFilesQuietly } from "../_lib/storage.ts"
 
-Deno.serve(async (req) => {
+Deno.serve(createHandler({ methods: ["DELETE"], requireAdmin: true }, async ({ req, config, jsonHeaders }) => {
+  const body = await readJsonBody(req)
+  const id = isObjectRecord(body) ? body.id : null
 
-  const context = prepareRequest(req)
-
-  if (context instanceof Response) {
-    return context
+  if (!id || typeof id !== "string") {
+    throw appError(POST_ERROR_CODES.INVALID_ID)
   }
 
-  const { config, jsonHeaders } = context
-
-  try {
-
-    if (req.method !== "DELETE") {
-      return errorResponse(ERROR_MESSAGES.METHOD_NOT_ALLOWED, 405, jsonHeaders)
-    }
-
-    const passwordError = await checkAdminPassword(req, config, jsonHeaders)
-
-    if (passwordError) {
-      return passwordError
-    }
-
-    let body: DeletePostRequestBody | null
-
-    try {
-      body = await req.json()
-    } catch {
-      return errorResponse(ERROR_MESSAGES.INVALID_JSON, 400, jsonHeaders)
-    }
-
-    const id = body?.id
-
-    if (!id || typeof id !== "string") {
-      return errorResponse(ERROR_MESSAGES.INVALID_ID, 400, jsonHeaders)
-    }
-
-    const { data: post, error: fetchError } = await supabase
-      .from("posts")
-      .select("id")
-      .eq("id", id)
-      .single()
-
-    if (fetchError || !post) {
-      return errorResponse(ERROR_MESSAGES.POST_NOT_FOUND, 404, jsonHeaders)
-    }
-
-    const files = await listAllPostFiles(id)
-    const paths = files.map(file => `${id}/${file.name}`)
-
-    const { error: deleteError } = await supabase
-      .from("posts")
-      .delete()
-      .eq("id", id)
-
-    if (deleteError) throw deleteError
-
-    // Storage cleanup is best-effort. The source of truth is removing the post row.
-    try {
-      await deleteFiles(paths)
-    } catch (storageError) {
-      console.error("Failed to cleanup post files after DB deletion", storageError)
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: SUCCESS_MESSAGES.POST_DELETED
-      }),
-      { status: 200, headers: jsonHeaders }
-    )
-
-  } catch (err: unknown) {
-
-    return internalErrorResponse(err, jsonHeaders)
-
+  if (!(await findPostById(id, ["id"]))) {
+    throw appError(POST_ERROR_CODES.POST_NOT_FOUND)
   }
-})
+
+  const paths = await listPostFilePaths(config.postsBucket, id)
+
+  await deletePostById(id)
+
+  // The source of truth is the removed row; leftover files are only logged.
+  await removeFilesQuietly(config.postsBucket, paths, "delete_post")
+
+  return jsonResponse({ success: true, message: POST_SUCCESS_CODES.POST_DELETED }, jsonHeaders)
+}))
