@@ -309,7 +309,7 @@ C√≥digos de erro: `INVALID_ACTION` (400, `action` desconhecida ou `action` em m√
 pnpm dev                   # servidor de desenvolvimento do admin
 pnpm build                 # checa tipos e gera o build do admin (admin/dist)
 pnpm lint                  # ESLint (admin)
-pnpm test                  # Vitest (shared) + deno test (functions)
+pnpm test                  # Vitest (shared, admin) + deno test (functions)
 pnpm test:functions        # apenas os testes das Edge Functions (exige Deno)
 pnpm -C shared test        # apenas os testes do shared
 pnpm -C shared typecheck   # tsc do shared

@@ -309,7 +309,7 @@ Error codes: `INVALID_ACTION` (400, unknown `action` or `action` on a non-POST),
 pnpm dev                   # admin dev server
 pnpm build                 # type-check and build the admin (admin/dist)
 pnpm lint                  # ESLint (admin)
-pnpm test                  # Vitest (shared) + deno test (functions)
+pnpm test                  # Vitest (shared, admin) + deno test (functions)
 pnpm test:functions        # only the Edge Function tests (needs Deno)
 pnpm -C shared test        # only the shared tests
 pnpm -C shared typecheck   # tsc for shared
