@@ -81,12 +81,6 @@
   cursor: default;
 }
 
-.image-list-item-status {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
 .image-list-item-error {
   font-size: 12px;
   font-weight: 700;

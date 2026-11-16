@@ -1,20 +1,21 @@
-import type { ChangeEvent } from "react"
-import "../assets/css/StyledFileInput.css"
+import type { ChangeEvent } from "react";
+import "./StyledFileInput.css";
 
 type StyledFileInputProps = {
-  text: string
-  accept?: string
-  onFileSelect?: (file: File | null) => void
-}
+  text: string;
+  accept?: string;
+  disabled?: boolean;
+  onFileSelect?: (file: File | null) => void;
+};
 
-export default function StyledFileInput({ text, accept, onFileSelect }: StyledFileInputProps) {
+export default function StyledFileInput({ text, accept, disabled = false, onFileSelect }: StyledFileInputProps) {
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null
+    const file = event.target.files?.[0] ?? null;
 
-    onFileSelect?.(file)
+    onFileSelect?.(file);
 
     // Keep the native input clean so future selections always trigger change.
-    event.target.value = ""
+    event.target.value = "";
   }
 
   return (
@@ -23,9 +24,10 @@ export default function StyledFileInput({ text, accept, onFileSelect }: StyledFi
       <input
         type="file"
         accept={accept}
+        disabled={disabled}
         className="styled-file-input-native"
         onChange={handleChange}
       />
     </label>
-  )
+  );
 }

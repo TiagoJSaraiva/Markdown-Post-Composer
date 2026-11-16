@@ -23,6 +23,7 @@ export const ptBR: Record<MessageKey, string> = {
   "editor.cancel": "Cancelar",
   "editor.preview": "Preview",
   "editor.markdownHelp": "Ajuda markdown",
+  "editor.markdownLabel": "Markdown do post",
   "editor.clear": "Limpar",
   "editor.website": "Website",
   "editor.lock": "Bloquear",
@@ -31,6 +32,7 @@ export const ptBR: Record<MessageKey, string> = {
   "editor.continue": "Continuar",
   "editor.clearingTitle": "Limpando formulário",
   "editor.clearingText": "Limpando formulário...",
+  "editor.clearErrorTitle": "Erro ao limpar o formulário",
   "editor.saveConfirmTitle": "Confirmar salvamento",
   "editor.saveConfirmCreate": "Deseja criar este post?",
   "editor.saveConfirmEdit": "Deseja salvar as alterações deste post?",
@@ -50,6 +52,7 @@ export const ptBR: Record<MessageKey, string> = {
   "editor.validation.imageBadChars": "Imagem {name} contém caracteres impróprios",
   "editor.validation.imageUnused": "Imagem {name} no container de imagens não está sendo usada",
   "editor.validation.imageMissing": "Imagem {name} no texto do post não existe",
+  "editor.validation.imageBusy": "Aguarde o término do envio das imagens",
   "editor.unnamedImage": "sem_nome",
   "editor.markdownHelpTemplate": `# Tutorial básico de como formatar o texto
 
@@ -110,6 +113,7 @@ Para saber  mais de markdown, clique [aqui](https://www.markdownguide.org/basic-
   "image.choose": "Escolher imagem",
   "image.namePlaceholder": "Nome",
   "image.confirmName": "Confirmar nome",
+  "image.remove": "Remover imagem",
 
   // Post list and preview panel
   "post.delete": "apagar",

@@ -1,5 +1,5 @@
 import { functionUrl } from "../lib/edgeFunctionsPaths";
-import { ApiError, type ApiErrorDetails } from "../lib/apiError";
+import { ApiError, parseErrorBody } from "../lib/apiError";
 import { buildAdminHeaders } from "@mdpc/shared/services/requestHelpers.ts";
 import {
   isDeleteTempImagesSuccessResponse,
@@ -25,20 +25,6 @@ type CallOptions = {
 
 function toStorageImage(image: TempImage): TempStorageImage {
   return { name: image.name, storagePath: image.path, publicUrl: image.publicUrl };
-}
-
-function readErrorBody(body: unknown): { code?: string; details?: ApiErrorDetails } {
-  if (typeof body !== "object" || body === null) {
-    return {};
-  }
-
-  const record = body as Record<string, unknown>;
-  const details =
-    typeof record.details === "object" && record.details !== null && !Array.isArray(record.details)
-      ? (record.details as ApiErrorDetails)
-      : undefined;
-
-  return { code: typeof record.error === "string" ? record.error : undefined, details };
 }
 
 /** Calls the temp_images function; throws ApiError on any failure. */
@@ -69,7 +55,7 @@ async function call(
   }
 
   if (!response.ok) {
-    const { code, details } = readErrorBody(body);
+    const { code, details } = parseErrorBody(body);
     throw new ApiError(response.status, code ?? "INVALID_RESPONSE", details);
   }
 

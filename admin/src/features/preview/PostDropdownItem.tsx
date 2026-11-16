@@ -1,5 +1,5 @@
-import { useI18n } from "../i18n";
-import "../assets/css/PostDropdownItem.css";
+import { useI18n } from "../../i18n";
+import "./PostDropdownItem.css";
 
 type PostDropdownItemProps = {
   id: string;
@@ -40,6 +40,7 @@ export default function PostDropdownItem({
             type="button"
             className="post-dropdown-item-action-button"
             onClick={() => onDelete(id)}
+            aria-label={`${t("post.delete")}: ${title}`}
             disabled={isActionsDisabled}
           >
             {t("post.delete")}
@@ -48,6 +49,7 @@ export default function PostDropdownItem({
             type="button"
             className="post-dropdown-item-action-button"
             disabled={isActionsDisabled}
+            aria-label={`${t("post.edit")}: ${title}`}
             onClick={() => onEdit(id)}
           >
             {t("post.edit")}

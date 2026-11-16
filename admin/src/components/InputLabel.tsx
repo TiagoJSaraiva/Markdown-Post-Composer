@@ -1,9 +1,23 @@
-import "../assets/css/InputLabel.css";
+import "./InputLabel.css";
 
-export default function InputLabel({value}: {value: string}) {
+type InputLabelProps = {
+  value: string;
+  /** Id of the field this text labels. Leave it out when an enclosing <label> already does. */
+  htmlFor?: string;
+};
+
+export default function InputLabel({ value, htmlFor }: InputLabelProps) {
+  if (htmlFor) {
     return (
-        <div className="input-label">
-            {value}
-        </div>
-    )
+      <label className="input-label" htmlFor={htmlFor}>
+        {value}
+      </label>
+    );
+  }
+
+  return (
+    <div className="input-label">
+      {value}
+    </div>
+  );
 }

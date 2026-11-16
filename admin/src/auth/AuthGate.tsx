@@ -3,7 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useI18n } from "../i18n";
 import { describeError } from "../i18n/errors";
 import { useAdminAuth } from "./authContext";
-import "../assets/css/Unlock.css";
+import "../components/StatusScreen.css";
 
 function UnlockScreen() {
   const { t } = useI18n();

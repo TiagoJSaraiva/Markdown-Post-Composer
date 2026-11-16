@@ -1,24 +1,7 @@
 import { createContext, useContext } from "react";
+import type { PostDraftState, TempImageItem } from "../../utils/draft";
 
-export type TempImageItem = {
-  id: number;
-  name: string;
-  pendingName: string;
-  storagePath: string | null;
-  publicUrl: string | null;
-  isBusy: boolean;
-  error: string | null;
-};
-
-export type PostDraftState = {
-  category: string;
-  title: string;
-  preview: string;
-  content_markdown: string;
-  active: boolean;
-  banner: File | null;
-  tempImages: TempImageItem[];
-};
+export type { PostDraftState, TempImageItem };
 
 export type EditSession = {
   postId: string;
@@ -30,18 +13,23 @@ export type PostDraftContextValue = {
   previewMarkdown: string;
   editSession: EditSession | null;
   tempReloadToken: number;
+  /** Changes whenever the list of published posts is known to be stale. */
+  postListVersion: number;
   setCategory: (category: string) => void;
   setTitle: (title: string) => void;
   setPreview: (preview: string) => void;
   setContentMarkdown: (content: string) => void;
   setActive: (active: boolean) => void;
   setBanner: (banner: File | null) => void;
-  setTempImages: (items: TempImageItem[]) => void;
+  updateTempImages: (update: (items: TempImageItem[]) => TempImageItem[]) => void;
   setPreviewMarkdown: (markdown: string) => void;
   setDraftValues: (values: Partial<PostDraftState>) => void;
   startEditSession: (postId: string, postTitle: string) => void;
   clearEditSession: () => void;
   requestTempReload: () => void;
+  /** Back to an empty new post: draft, preview and edit session; temp images are reloaded. */
+  resetDraft: () => void;
+  notifyPostsChanged: () => void;
 };
 
 export const PostDraftContext = createContext<PostDraftContextValue | null>(null);
