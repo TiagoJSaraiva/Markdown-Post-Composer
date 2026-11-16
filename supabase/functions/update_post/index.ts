@@ -1,3 +1,8 @@
+/*
+ * Edge Function update_post. PUT, multipart form with the post id, admin password
+ * required. Replaces the post fields and images and answers
+ * { success, message: POST_UPDATED, id }; replaced files are removed afterwards.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
 import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"

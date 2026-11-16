@@ -1,3 +1,7 @@
+/*
+ * Edge Function delete_post. DELETE, JSON body { id }, admin password required.
+ * Removes the post row and its files and answers { success, message: POST_DELETED }.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
 import { POST_SUCCESS_CODES } from "@shared/contracts/postSuccessCodes.ts"

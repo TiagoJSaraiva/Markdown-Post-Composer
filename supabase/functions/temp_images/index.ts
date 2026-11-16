@@ -1,3 +1,9 @@
+/*
+ * Edge Function temp_images. Admin password required on every method.
+ * GET lists temp images, POST uploads one (?action=import copies a post image
+ * into the temp bucket), PATCH renames, DELETE removes one or all.
+ * Answers { success, data } as defined in shared/contracts/tempImages.ts.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import type {
   DeleteTempImagesSuccessResponse,

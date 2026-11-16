@@ -1,3 +1,7 @@
+/*
+ * Edge Function load_post. GET ?id=<uuid>; public for active posts, inactive ones
+ * require the admin password. Answers { success, data: PostDetails }.
+ */
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { POST_ERROR_CODES } from "@shared/contracts/postErrorCodes.ts"
 import type { LoadPostSuccessResponse, PostDetails } from "@shared/contracts/loadPost.ts"
