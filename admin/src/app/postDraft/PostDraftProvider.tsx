@@ -1,3 +1,7 @@
+/*
+ * Holds the post draft state and provides it through PostDraftContext.
+ * Mounted by App above the auth gate so locking the app keeps the draft.
+ */
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { getConfig } from "../../config/env";
@@ -10,6 +14,13 @@ import {
   type TempImageItem
 } from "./postDraftContext";
 
+/**
+ * Provides the post draft and its actions to the tree below.
+ *
+ * @param props - Component props.
+ * @param props.children - Subtree that consumes the draft.
+ * @returns The context provider.
+ */
 export function PostDraftProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<PostDraftState>(() => createEmptyDraft(getConfig().defaultCategory));
   const [previewMarkdown, setPreviewMarkdown] = useState("");

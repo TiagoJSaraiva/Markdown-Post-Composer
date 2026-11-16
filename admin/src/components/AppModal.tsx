@@ -1,10 +1,17 @@
+/*
+ * Accessible modal dialog used by every confirmation, progress and result popup.
+ * Rendered through a portal; locks the rest of the app while open.
+ */
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import "./AppModal.css";
 
+/** Number of mounted modals; the app stays locked while it is above zero. */
 let openModalCount = 0;
 
+/** Props of AppModal. */
 type AppModalProps = {
+  /** Dialog heading; also its accessible name. */
   title: string;
   /** Called on Escape. Leave it out for a modal that cannot be dismissed (work in progress). */
   onClose?: () => void;
@@ -31,7 +38,15 @@ function removeAppLock() {
   }
 }
 
-/** Modal dialog rendered in `#app-modal-root`; locks the rest of the app while any modal is open. */
+/**
+ * Modal dialog rendered in `#app-modal-root`; locks the rest of the app while any modal is open.
+ *
+ * @param props - Component props.
+ * @param props.title - Dialog heading.
+ * @param props.onClose - Called on Escape; omit for a modal that cannot be dismissed.
+ * @param props.children - Dialog content.
+ * @returns A portal with the dialog.
+ */
 export default function AppModal({ title, onClose, children }: AppModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);

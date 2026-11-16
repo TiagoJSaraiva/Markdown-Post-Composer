@@ -1,11 +1,24 @@
+/*
+ * Screen listing the missing or invalid environment variables. Shown by App instead
+ * of the composer when parseEnv fails.
+ */
 import { useI18n } from "../i18n";
 import type { ConfigResult } from "./env";
 import "../components/StatusScreen.css";
 
+/** Props of ConfigErrorScreen. */
 type ConfigErrorScreenProps = {
+  /** Failed configuration result to report. */
   result: Extract<ConfigResult, { ok: false }>;
 };
 
+/**
+ * Explains which environment variables must be fixed.
+ *
+ * @param props - Component props.
+ * @param props.result - Failed configuration result.
+ * @returns The error screen.
+ */
 export default function ConfigErrorScreen({ result }: ConfigErrorScreenProps) {
   const { t } = useI18n();
 

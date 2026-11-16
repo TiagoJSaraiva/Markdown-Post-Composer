@@ -1,3 +1,7 @@
+/*
+ * Root component: shows the configuration error screen or the three-panel composer
+ * behind the unlock gate. Mounted by main.tsx.
+ */
 import EditorPanel from "../features/editor/EditorPanel";
 import FormPanel from "../features/form/FormPanel";
 import PostPreviewPanel from "../features/preview/PostPreviewPanel";
@@ -8,6 +12,12 @@ import { configResult } from "../config/env";
 import { PostDraftProvider } from "./postDraft/PostDraftProvider";
 import "./App.css";
 
+/**
+ * Root component of the admin panel.
+ *
+ * @returns The configuration error screen when the environment is invalid, otherwise the
+ * provider tree with the editor, form and preview panels.
+ */
 function App() {
   if (!configResult.ok) {
     return <ConfigErrorScreen result={configResult} />;

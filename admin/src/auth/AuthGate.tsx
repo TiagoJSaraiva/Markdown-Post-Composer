@@ -1,3 +1,7 @@
+/*
+ * Gate that renders the app only while a password is held and the unlock screen
+ * otherwise. Mounted by App inside AuthProvider.
+ */
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useI18n } from "../i18n";
@@ -58,7 +62,13 @@ function UnlockScreen() {
   );
 }
 
-/** Renders the app only while unlocked, the unlock screen otherwise. */
+/**
+ * Renders the app only while unlocked, the unlock screen otherwise.
+ *
+ * @param props - Component props.
+ * @param props.children - App content shown once unlocked.
+ * @returns The children or the unlock screen.
+ */
 export default function AuthGate({ children }: { children: ReactNode }) {
   const { password } = useAdminAuth();
 

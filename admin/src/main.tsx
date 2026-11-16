@@ -1,3 +1,7 @@
+/*
+ * Browser entry point: sets the document title and language from the configuration
+ * and mounts the App component.
+ */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'

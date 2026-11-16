@@ -1,10 +1,21 @@
+/*
+ * Keeps the admin password in React state (memory only) and provides the lock and
+ * unlock actions through AuthContext. Mounted by App.
+ */
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { isUnauthorizedError, isUnauthorizedStatus } from "../lib/apiError";
 import { listTempImages } from "../services/tempImages";
 import { AuthContext, type AuthContextValue } from "./authContext";
 
-// The password lives in React state only: never in localStorage/sessionStorage.
+/**
+ * Provides the password session. The password lives in React state only: never in
+ * localStorage or sessionStorage.
+ *
+ * @param props - Component props.
+ * @param props.children - Subtree that consumes the session.
+ * @returns The context provider.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState<string | null>(null);
   const [wasRejected, setWasRejected] = useState(false);
