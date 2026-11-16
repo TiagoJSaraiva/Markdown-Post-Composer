@@ -2,6 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 
 import type { LoadPostSuccessResponse, PostDetails } from "@shared/contracts/loadPost.ts"
 import { getConfig } from "../_lib/config.ts"
+import { listAllPostFiles } from "../_lib/auxiliaryFunctions.ts"
 import { ERROR_MESSAGES } from "../_lib/errorMessages.ts"
 import { errorResponse, internalErrorResponse, prepareRequest } from "../_lib/http.ts"
 import { supabase } from "../_lib/supabaseClient.ts"
@@ -85,18 +86,10 @@ function buildPublicUrl(path: string) {
 }
 
 async function listPostImagePaths(postId: string, bannerPath: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .storage
-    .from(getConfig().postsBucket)
-    .list(postId, { limit: 500, offset: 0 })
+  const files = await listAllPostFiles(postId)
 
-  if (error) {
-    throw error
-  }
-
-  return (data ?? [])
+  return files
     .filter((item) => item.name && !item.name.endsWith("/"))
     .map((item) => `${postId}/${item.name}`)
     .filter((path) => path !== bannerPath)
 }
-
