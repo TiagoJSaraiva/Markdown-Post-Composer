@@ -1,19 +1,33 @@
+/*
+ * Hook with the delete-post flow (confirm, request, result). Used by PostPreviewPanel.
+ */
 import { useState } from "react";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
 import { useI18n } from "../../i18n";
 import { describeServiceFailure } from "../../i18n/errors";
 import deletePostService from "../../services/deletePost";
 
+/** Steps of the delete modal. */
 export type DeleteModalState = "closed" | "confirming" | "submitting" | "result";
 
+/** What the result step of the delete modal shows. */
 export type DeleteResult = {
+  /** Whether the post was deleted. */
   succeeded: boolean;
   title: string;
   message: string;
+  /** Translated backend error, if any. */
   details: string | null;
 };
 
-/** Delete flow of a post from the dropdown: confirmation, request and result modal states. */
+/**
+ * Delete flow of a post from the dropdown: confirmation, request and result modal states.
+ * A 401 locks the app instead of showing an error.
+ *
+ * @param onDeleted - Called with the post id once a successful result is acknowledged.
+ * @returns `state` and `result` (modal data), `isSubmitting`, and the actions `open` (ask to
+ * delete a post id), `close`, `confirm` (send the request) and `acknowledge` (close the result).
+ */
 export function useDeletePost(onDeleted: (postId: string) => void) {
   const { t } = useI18n();
   const password = useAdminPassword();

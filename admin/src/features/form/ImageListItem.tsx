@@ -1,21 +1,42 @@
+/*
+ * One image slot of the form panel: file picker, name input with confirm button and
+ * remove button. Presentational; FormPanel wires it to useTempImages.
+ */
 import { Check } from "lucide-react";
 import StyledFileInput from "../../components/StyledFileInput";
 import { useI18n } from "../../i18n";
 import "./ImageListItem.css";
 
+/** Props of ImageListItem. */
 type ImageListItemProps = {
+  /** Slot id (TempImageItem.id), passed back to every callback. */
   id: number;
+  /** Disables the controls while a request for this slot is in flight. */
   isBusy: boolean;
+  /** True once a file was uploaded; shows the name input and the replace label. */
   hasSelectedFile: boolean;
+  /** Value of the name input. */
   displayName: string;
+  /** Enables the confirm button (see canConfirmImageName). */
   canConfirmName: boolean;
+  /** Translated error of the last operation on this slot. */
   errorText?: string | null;
+  /** A file was chosen (or `null` when cancelled). */
   onPickFile: (id: number, file: File | null) => void;
+  /** The name input changed. */
   onChangeName: (id: number, value: string) => void;
+  /** The typed name should be sent as a rename. */
   onConfirmName: (id: number) => void;
+  /** The slot should be removed. */
   onRemove: (id: number) => void;
 };
 
+/**
+ * A row of the image list.
+ *
+ * @param props - Component props.
+ * @returns The row.
+ */
 export default function ImageListItem({
   id,
   isBusy,

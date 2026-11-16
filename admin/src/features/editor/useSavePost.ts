@@ -1,3 +1,7 @@
+/*
+ * Hook with the whole save flow: validation, confirmation, upload or update, cleanup and
+ * the modal states. Used by EditorPanel and SavePostModal.
+ */
 import { useState } from "react";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
@@ -12,12 +16,18 @@ import updatePostService from "../../services/updatePost";
 import uploadPostService from "../../services/uploadPost";
 import { validateDraftBeforeSave, type DraftIssue } from "../../utils/draft";
 
+/** Steps of the save modal. */
 export type SaveModalState = "closed" | "confirming" | "submitting" | "result";
 
+/** What the result step of the save modal shows. */
 export type SaveResult = {
+  /** Whether the post was saved; success also resets the draft when acknowledged. */
   succeeded: boolean;
+  /** Modal title; empty falls back to a generic one. */
   title: string;
+  /** Main text; may be empty. */
   message: string;
+  /** Translated detail lines (validation issues or the backend error). */
   errors: string[];
 };
 
@@ -42,7 +52,14 @@ function describeIssue(t: Translate, issue: DraftIssue): string {
   }
 }
 
-/** Save flow of the editor: validation, confirmation, upload and the resulting modal states. */
+/**
+ * Save flow of the editor: validation, confirmation, upload and the resulting modal states.
+ * A 401 locks the app instead of showing an error.
+ *
+ * @returns `state` and `result` (modal data), `isEditing`, and the actions `open` (validate, then
+ * ask for confirmation), `close`, `confirm` (send the post) and `acknowledge` (close the result;
+ * resets the draft after a success).
+ */
 export function useSavePost() {
   const { draft, editSession, resetDraft, notifyPostsChanged } = usePostDraft();
   const { t } = useI18n();

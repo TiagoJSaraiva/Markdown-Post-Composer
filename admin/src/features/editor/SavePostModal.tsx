@@ -1,16 +1,33 @@
+/*
+ * Modal of the save flow (confirm, saving, result). Rendered by EditorPanel from the
+ * state returned by useSavePost.
+ */
 import AppModal from "../../components/AppModal";
 import { useI18n } from "../../i18n";
 import type { SaveModalState, SaveResult } from "./useSavePost";
 
+/** Props of SavePostModal. */
 type SavePostModalProps = {
+  /** Step of the flow to show; nothing is rendered when closed. */
   state: SaveModalState;
+  /** Outcome shown in the `result` step. */
   result: SaveResult | null;
+  /** Selects the confirmation text for updating instead of creating. */
   isEditing: boolean;
+  /** Closes the confirmation. */
   onCancel: () => void;
+  /** Sends the post. */
   onConfirm: () => void;
+  /** Closes the result. */
   onAcknowledge: () => void;
 };
 
+/**
+ * Modal for the current step of the save flow.
+ *
+ * @param props - Component props.
+ * @returns The modal, or `null` while the flow is closed.
+ */
 export default function SavePostModal({
   state,
   result,

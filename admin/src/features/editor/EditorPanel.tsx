@@ -1,3 +1,7 @@
+/*
+ * Left panel: markdown textarea, toolbar and the modals of the save, clear and help flows.
+ * Composed by App; state comes from the post draft context.
+ */
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth } from "../../auth/authContext";
 import { getConfig } from "../../config/env";
@@ -13,6 +17,11 @@ import { useSavePost } from "./useSavePost";
 import { useUnsavedChangesGuard } from "./useUnsavedChangesGuard";
 import "./EditorPanel.css";
 
+/**
+ * Markdown editor with its toolbar and flows (save, clear, help, unsaved-changes guard).
+ *
+ * @returns The editor panel.
+ */
 export default function EditorPanel() {
   const { draft, editSession, setContentMarkdown, setPreviewMarkdown } = usePostDraft();
   const { t } = useI18n();

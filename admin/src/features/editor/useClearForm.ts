@@ -1,3 +1,7 @@
+/*
+ * Hook behind the clear and cancel-edit buttons: empties the backend temp images and
+ * resets the draft. Used by EditorPanel.
+ */
 import { useState } from "react";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
@@ -7,7 +11,13 @@ import { getConfig } from "../../config/env";
 import { clearTempImages } from "../../services/tempImages";
 import { createEmptyDraft } from "../../utils/draft";
 
-/** Empties the form and the backend temp images; also used to leave an edit session. */
+/**
+ * Empties the form and the backend temp images; also used to leave an edit session.
+ *
+ * @returns `isClearing` (request in flight), `error` (translated failure message or `null`),
+ * `dismissError`, `clearAll` (empties the draft, keeping the edit session untouched) and
+ * `cancelEdit` (clears temp images and resets to a new post).
+ */
 export function useClearForm() {
   const { setDraftValues, setPreviewMarkdown, requestTempReload, resetDraft } = usePostDraft();
   const password = useAdminPassword();
