@@ -79,7 +79,7 @@ export async function handleRequest(request: Promise<Response>): Promise<Service
 
     return { status: res.status, data, error: null }
   } catch (error) {
-    console.error("ERRO NA REQUISICAO:", error)
+    console.error("Request failed:", error)
     return { status: 0, data: null, error }
   }
 }
