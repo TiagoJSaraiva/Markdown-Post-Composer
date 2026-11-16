@@ -31,6 +31,8 @@ function describeIssue(t: Translate, issue: DraftIssue): string {
       return t("editor.validation.bannerEmpty");
     case "previewEmpty":
       return t("editor.validation.previewEmpty");
+    case "imageBusy":
+      return t("editor.validation.imageBusy");
     case "imageBadChars":
       return t("editor.validation.imageBadChars", { name: issue.name });
     case "imageMissing":

@@ -23,7 +23,7 @@ export type PostDraftState = {
 };
 
 export type DraftIssue =
-  | { code: "contentEmpty" | "titleEmpty" | "bannerEmpty" | "previewEmpty" }
+  | { code: "contentEmpty" | "titleEmpty" | "bannerEmpty" | "previewEmpty" | "imageBusy" }
   | { code: "imageBadChars" | "imageUnused" | "imageMissing"; name: string };
 
 /** Image names are limited to letters and digits (the backend normalizes anything else away). */
@@ -90,6 +90,10 @@ export function validateDraftBeforeSave(draft: PostDraftState, isEditing: boolea
 
   if (!draft.preview.trim()) {
     add({ code: "previewEmpty" });
+  }
+
+  if (draft.tempImages.some((item) => item.isBusy)) {
+    add({ code: "imageBusy" });
   }
 
   const markdownImageRefs = getMarkdownImageReferences(draft.content_markdown);

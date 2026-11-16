@@ -83,6 +83,8 @@ export function useEditPost(posts: DropdownPost[], onPrepared: () => void) {
         return;
       }
 
+      // The temp storage may already have been emptied: resync the image list with it.
+      requestTempReload();
       setErrorMessage(error instanceof ApiError ? describeError(t, error) : t("preview.prepareUnexpected"));
     } finally {
       setIsPreparing(false);

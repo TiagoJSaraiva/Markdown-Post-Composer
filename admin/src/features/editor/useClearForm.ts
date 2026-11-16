@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { usePostDraft } from "../../app/postDraft/postDraftContext";
 import { useAdminAuth, useAdminPassword } from "../../auth/authContext";
+import { useI18n } from "../../i18n";
+import { describeError } from "../../i18n/errors";
 import { getConfig } from "../../config/env";
 import { clearTempImages } from "../../services/tempImages";
 import { createEmptyDraft } from "../../utils/draft";
@@ -11,10 +13,13 @@ export function useClearForm() {
   const password = useAdminPassword();
   const { lockIfUnauthorized } = useAdminAuth();
   const { defaultCategory } = getConfig();
+  const { t } = useI18n();
   const [isClearing, setIsClearing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function clearAll() {
     setIsClearing(true);
+    setError(null);
 
     try {
       await clearTempImages(password);
@@ -23,7 +28,9 @@ export function useClearForm() {
       setPreviewMarkdown("");
       requestTempReload();
     } catch (error: unknown) {
-      lockIfUnauthorized(error);
+      if (!lockIfUnauthorized(error)) {
+        setError(describeError(t, error));
+      }
     } finally {
       setIsClearing(false);
     }
@@ -42,5 +49,5 @@ export function useClearForm() {
     resetDraft();
   }
 
-  return { isClearing, clearAll, cancelEdit };
+  return { isClearing, error, dismissError: () => setError(null), clearAll, cancelEdit };
 }

@@ -31,6 +31,7 @@ export const en = {
   "editor.continue": "Continue",
   "editor.clearingTitle": "Clearing form",
   "editor.clearingText": "Clearing form...",
+  "editor.clearErrorTitle": "Error clearing the form",
   "editor.saveConfirmTitle": "Confirm save",
   "editor.saveConfirmCreate": "Do you want to create this post?",
   "editor.saveConfirmEdit": "Do you want to save the changes to this post?",
@@ -50,6 +51,7 @@ export const en = {
   "editor.validation.imageBadChars": "Image {name} contains invalid characters",
   "editor.validation.imageUnused": "Image {name} in the image container is not being used",
   "editor.validation.imageMissing": "Image {name} in the post text does not exist",
+  "editor.validation.imageBusy": "Wait for the images to finish uploading",
   "editor.unnamedImage": "unnamed",
   "editor.markdownHelpTemplate": `# Basic tutorial on how to format text
 

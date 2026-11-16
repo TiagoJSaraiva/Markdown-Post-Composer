@@ -54,7 +54,9 @@ export default function EditorPanel() {
       />
 
       {help.isConfirmOpen ? <ReplaceContentModal onCancel={help.cancel} onContinue={help.confirm} /> : null}
-      {clearForm.isClearing ? <ClearingModal /> : null}
+      {clearForm.isClearing || clearForm.error ? (
+        <ClearingModal error={clearForm.error} onDismiss={clearForm.dismissError} />
+      ) : null}
       <SavePostModal
         state={save.state}
         result={save.result}
