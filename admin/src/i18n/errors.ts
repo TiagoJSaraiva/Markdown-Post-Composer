@@ -1,3 +1,7 @@
+/*
+ * Maps backend and client error codes to translated messages. Used wherever an
+ * ApiError or a failed service result is shown to the user.
+ */
 import { POST_ERROR_CODES, type PostErrorCode } from "@mdpc/shared/contracts/postErrorCodes.ts";
 import { ApiError, parseErrorBody, type ApiErrorDetails } from "../lib/apiError";
 import type { MessageKey, Translate } from "./index";
@@ -50,7 +54,14 @@ function toParam(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
 }
 
-/** Translated message for a backend error code and its optional details. */
+/**
+ * Translated message for a backend error code and its optional details.
+ *
+ * @param t - Translate function.
+ * @param code - Backend or client-side error code.
+ * @param details - Values for the message placeholders (arrays are joined with ", ").
+ * @returns The message, or the generic unknown-error message with the code.
+ */
 export function translateErrorCode(t: Translate, code: string, details?: ApiErrorDetails): string {
   const key = isPostErrorCode(code)
     ? ERROR_KEYS[code]
@@ -71,7 +82,13 @@ export function translateErrorCode(t: Translate, code: string, details?: ApiErro
   return t(key, params);
 }
 
-/** Message for any thrown value: an ApiError is translated, anything else is generic. */
+/**
+ * Message for any thrown value: an ApiError is translated, anything else is generic.
+ *
+ * @param t - Translate function.
+ * @param error - Thrown value.
+ * @returns The message.
+ */
 export function describeError(t: Translate, error: unknown): string {
   if (error instanceof ApiError) {
     return translateErrorCode(t, error.code, error.details);
@@ -80,7 +97,14 @@ export function describeError(t: Translate, error: unknown): string {
   return t("error.generic");
 }
 
-/** Translated message of a failed `handleRequest` result (status 0 = network failure), or null. */
+/**
+ * Translated message of a failed `handleRequest` result (status 0 = network failure), or null.
+ *
+ * @param t - Translate function.
+ * @param status - HTTP status, 0 for a network failure.
+ * @param data - Parsed response body.
+ * @returns The message, or `null` when the body carries no error code.
+ */
 export function describeServiceFailure(t: Translate, status: number, data: unknown): string | null {
   if (status === 0) {
     return translateErrorCode(t, "NETWORK_ERROR");
@@ -91,7 +115,13 @@ export function describeServiceFailure(t: Translate, status: number, data: unkno
   return code ? translateErrorCode(t, code, details) : null;
 }
 
-/** Translated message of a failed posts-client result. */
+/**
+ * Translated message of a failed posts-client result.
+ *
+ * @param t - Translate function.
+ * @param failure - The `error` code and `details` of the result.
+ * @returns The message.
+ */
 export function describeClientFailure(
   t: Translate,
   failure: { error: string; details?: ApiErrorDetails }
