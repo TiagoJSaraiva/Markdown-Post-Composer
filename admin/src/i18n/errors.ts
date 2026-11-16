@@ -1,5 +1,5 @@
 import { POST_ERROR_CODES, type PostErrorCode } from "@mdpc/shared/contracts/postErrorCodes.ts";
-import { ApiError, type ApiErrorDetails } from "../lib/apiError";
+import { ApiError, parseErrorBody, type ApiErrorDetails } from "../lib/apiError";
 import type { MessageKey, Translate } from "./index";
 
 // One entry per backend error code, so adding a code forces adding a message.
@@ -82,22 +82,9 @@ export function describeServiceFailure(t: Translate, status: number, data: unkno
     return translateErrorCode(t, "NETWORK_ERROR");
   }
 
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
+  const { code, details } = parseErrorBody(data);
 
-  const record = data as Record<string, unknown>;
-
-  if (typeof record.error !== "string" || !record.error) {
-    return null;
-  }
-
-  const details =
-    typeof record.details === "object" && record.details !== null && !Array.isArray(record.details)
-      ? (record.details as ApiErrorDetails)
-      : undefined;
-
-  return translateErrorCode(t, record.error, details);
+  return code ? translateErrorCode(t, code, details) : null;
 }
 
 /** Translated message of a failed posts-client result. */

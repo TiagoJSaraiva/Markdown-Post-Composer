@@ -35,23 +35,3 @@
 #app-modal-root {
   position: relative;
 }
-
-.app-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: var(--overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  z-index: 9999;
-}
-
-body.app-has-modal {
-  overflow: hidden;
-}
-
-.app-container[inert] {
-  pointer-events: none;
-  user-select: none;
-}

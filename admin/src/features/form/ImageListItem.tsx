@@ -1,21 +1,20 @@
-import "../assets/css/ImageListItem.css"
-import StyledFileInput from "./StyledFileInput"
-import { Check } from "lucide-react"
-import { useI18n } from "../i18n"
+import { Check } from "lucide-react";
+import StyledFileInput from "../../components/StyledFileInput";
+import { useI18n } from "../../i18n";
+import "./ImageListItem.css";
 
 type ImageListItemProps = {
-  id: number
-  isBusy: boolean
-  hasSelectedFile: boolean
-  displayName: string
-  canConfirmName: boolean
-  statusText?: string
-  errorText?: string | null
-  onPickFile: (id: number, file: File | null) => void
-  onChangeName: (id: number, value: string) => void
-  onConfirmName: (id: number) => void
-  onRemove: (id: number) => void
-}
+  id: number;
+  isBusy: boolean;
+  hasSelectedFile: boolean;
+  displayName: string;
+  canConfirmName: boolean;
+  errorText?: string | null;
+  onPickFile: (id: number, file: File | null) => void;
+  onChangeName: (id: number, value: string) => void;
+  onConfirmName: (id: number) => void;
+  onRemove: (id: number) => void;
+};
 
 export default function ImageListItem({
   id,
@@ -23,26 +22,13 @@ export default function ImageListItem({
   hasSelectedFile,
   displayName,
   canConfirmName,
-  statusText,
   errorText,
   onPickFile,
   onChangeName,
   onConfirmName,
   onRemove
 }: ImageListItemProps) {
-  const { t } = useI18n()
-
-  function handleFileSelect(file: File | null) {
-    onPickFile(id, file)
-  }
-
-  function handleRemove() {
-    onRemove(id)
-  }
-
-  function handleConfirmName() {
-    onConfirmName(id)
-  }
+  const { t } = useI18n();
 
   return (
     <div className="image-list-item">
@@ -50,7 +36,7 @@ export default function ImageListItem({
         <StyledFileInput
           text={hasSelectedFile ? t("image.replace") : t("image.choose")}
           accept="image/*"
-          onFileSelect={handleFileSelect}
+          onFileSelect={(file) => onPickFile(id, file)}
         />
 
         {hasSelectedFile ? (
@@ -63,15 +49,15 @@ export default function ImageListItem({
               onChange={(event) => onChangeName(id, event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  event.preventDefault()
-                  handleConfirmName()
+                  event.preventDefault();
+                  onConfirmName(id);
                 }
               }}
             />
             <button
               type="button"
               className="image-list-item-name-confirm"
-              onClick={handleConfirmName}
+              onClick={() => onConfirmName(id)}
               disabled={!canConfirmName || isBusy}
               aria-label={t("image.confirmName")}
             >
@@ -83,15 +69,14 @@ export default function ImageListItem({
         <button
           type="button"
           className="image-list-item-delete-button"
-          onClick={handleRemove}
+          onClick={() => onRemove(id)}
           disabled={isBusy}
         >
           X
         </button>
       </div>
 
-      {statusText ? <span className="image-list-item-status">{statusText}</span> : null}
       {errorText ? <span className="image-list-item-error">{errorText}</span> : null}
     </div>
-  )
+  );
 }

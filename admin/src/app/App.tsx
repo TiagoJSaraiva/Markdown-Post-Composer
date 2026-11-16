@@ -1,12 +1,12 @@
-import EditorPanel from "../components/EditorPanel";
-import FormPanel from "../components/FormPanel";
-import PostPreviewPanel from "../components/PostPreviewPanel";
+import EditorPanel from "../features/editor/EditorPanel";
+import FormPanel from "../features/form/FormPanel";
+import PostPreviewPanel from "../features/preview/PostPreviewPanel";
 import { AuthProvider } from "../auth/AuthProvider";
 import AuthGate from "../auth/AuthGate";
 import ConfigErrorScreen from "../config/ConfigErrorScreen";
 import { configResult } from "../config/env";
-import { PostDraftProvider } from "./postDraftStore";
-import "../assets/css/App.css";
+import { PostDraftProvider } from "./postDraft/PostDraftProvider";
+import "./App.css";
 
 function App() {
   if (!configResult.ok) {

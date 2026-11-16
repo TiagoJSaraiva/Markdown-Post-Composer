@@ -1,6 +1,6 @@
 import { useI18n } from "../i18n";
 import type { ConfigResult } from "./env";
-import "../assets/css/Unlock.css";
+import "../components/StatusScreen.css";
 
 type ConfigErrorScreenProps = {
   result: Extract<ConfigResult, { ok: false }>;

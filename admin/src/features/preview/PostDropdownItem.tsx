@@ -1,5 +1,5 @@
-import { useI18n } from "../i18n";
-import "../assets/css/PostDropdownItem.css";
+import { useI18n } from "../../i18n";
+import "./PostDropdownItem.css";
 
 type PostDropdownItemProps = {
   id: string;

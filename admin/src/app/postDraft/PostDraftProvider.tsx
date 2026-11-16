@@ -1,23 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getConfig } from "../config/env";
+import { getConfig } from "../../config/env";
+import { createEmptyDraft } from "../../utils/draft";
 import {
   PostDraftContext,
   type EditSession,
   type PostDraftContextValue,
-  type PostDraftState
+  type PostDraftState,
+  type TempImageItem
 } from "./postDraftContext";
 
 export function PostDraftProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraft] = useState<PostDraftState>({
-    category: getConfig().defaultCategory,
-    title: "",
-    preview: "",
-    content_markdown: "",
-    active: true,
-    banner: null,
-    tempImages: []
-  });
+  const [draft, setDraft] = useState<PostDraftState>(() => createEmptyDraft(getConfig().defaultCategory));
   const [previewMarkdown, setPreviewMarkdown] = useState("");
   const [editSession, setEditSession] = useState<EditSession | null>(null);
   const [tempReloadToken, setTempReloadToken] = useState(0);
@@ -46,8 +40,8 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setDraft((prev) => ({ ...prev, banner }));
   }, []);
 
-  const setTempImages = useCallback((tempImages: PostDraftState["tempImages"]) => {
-    setDraft((prev) => ({ ...prev, tempImages }));
+  const updateTempImages = useCallback((update: (items: TempImageItem[]) => TempImageItem[]) => {
+    setDraft((prev) => ({ ...prev, tempImages: update(prev.tempImages) }));
   }, []);
 
   const setDraftValues = useCallback((values: Partial<PostDraftState>) => {
@@ -77,7 +71,7 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setContentMarkdown,
     setActive,
     setBanner,
-    setTempImages,
+    updateTempImages,
     setPreviewMarkdown,
     setDraftValues,
     startEditSession,
@@ -94,7 +88,7 @@ export function PostDraftProvider({ children }: { children: ReactNode }) {
     setContentMarkdown,
     setActive,
     setBanner,
-    setTempImages,
+    updateTempImages,
     setPreviewMarkdown,
     setDraftValues,
     startEditSession,
